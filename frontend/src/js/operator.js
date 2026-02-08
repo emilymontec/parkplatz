@@ -69,7 +69,7 @@ export default function initOperator() {
 
                 if (res.status === 401) {
                     clearAuthSession();
-                    navigateTo('/');
+                    navigateTo('/login');
                     return;
                 }
 
@@ -105,7 +105,7 @@ async function loadVehicles() {
 
         if (res.status === 401) {
             clearAuthSession();
-            navigateTo('/');
+            navigateTo('/login');
             return;
         }
 
@@ -171,7 +171,7 @@ window.procesarSalida = async (placa) => {
 
         if (res.status === 401) {
             clearAuthSession();
-            navigateTo('/');
+            navigateTo('/login');
             return;
         }
 
@@ -203,13 +203,13 @@ async function handleLogout() {
         clearAuthSession();
         
         // Redirigir a login
-        navigateTo('/');
+        navigateTo('/login');
 
     } catch (err) {
         console.error('Logout error:', err);
         // Forzar logout aunque falle
         clearAuthSession();
-        navigateTo('/');
+        navigateTo('/login');
     }
 }
 

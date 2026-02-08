@@ -1,15 +1,14 @@
 <nav class="navbar">
-    <a href="#/admin" class="logo"><span>Park</span>platz</a>
+    <a href="/admin" class="logo"><span>Park</span>platz</a>
     <div class="nav-links">
-        <a href="#/admin" class="active">Panel Admin</a>
-        <a href="#/usuarios" style="pointer-events: none; opacity: 0.5;">Usuarios</a>
-        <a href="#/config" style="pointer-events: none; opacity: 0.5;">Ajustes</a>
+        <a href="/admin" class="active">Panel Admin</a>
+        <a href="#" style="pointer-events: none; opacity: 0.5;">Usuarios</a>
+        <a href="#" style="pointer-events: none; opacity: 0.5;">Ajustes</a>
     </div>
     <div class="user-profile">
         <span id="userName" class="user-info">Cargando...</span>
         <div id="userInitials" class="avatar">A</div>
-        <button class="btn btn-logout" onclick="localStorage.removeItem('user'); location.hash='/'">Cerrar
-            sesión</button>
+        <button id="logoutBtn" class="btn btn-logout">Cerrar sesión</button>
     </div>
 </nav>
 

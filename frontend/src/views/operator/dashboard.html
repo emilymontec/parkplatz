@@ -1,15 +1,14 @@
 <nav class="navbar">
-    <a href="#/operator" class="logo"><span>Park</span>platz</a>
+    <a href="/operator" class="logo"><span>Park</span>platz</a>
     <div class="nav-links">
-        <a href="#/operator" class="active">Operación</a>
-        <a href="#/tarifas" style="pointer-events: none; opacity: 0.5;">Tarifas</a>
-        <a href="#/reportes" style="pointer-events: none; opacity: 0.5;">Reportes</a>
+        <a href="/operator" class="active">Operación</a>
+        <a href="#" style="pointer-events: none; opacity: 0.5;">Tarifas</a>
+        <a href="#" style="pointer-events: none; opacity: 0.5;">Reportes</a>
     </div>
     <div class="user-profile">
         <span id="userName" class="user-info">Cargando...</span>
         <div id="userInitials" class="avatar">U</div>
-        <button class="btn btn-logout" onclick="localStorage.removeItem('user'); location.hash='/'">Cerrar
-            sesión</button>
+        <button id="logoutBtn" class="btn btn-logout">Cerrar sesión</button>
     </div>
 </nav>
 

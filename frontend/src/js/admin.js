@@ -33,7 +33,7 @@ async function loadDashboardData() {
         if (res.status === 401) {
             console.warn('Token expirado');
             clearAuthSession();
-            navigateTo('/');
+            navigateTo('/login');
             return;
         }
 
@@ -83,13 +83,13 @@ async function handleLogout() {
         clearAuthSession();
         
         // Redirigir a login
-        navigateTo('/');
+        navigateTo('/login');
 
     } catch (err) {
         console.error('Logout error:', err);
         // Forzar logout aunque falle
         clearAuthSession();
-        navigateTo('/');
+        navigateTo('/login');
     }
 }
 

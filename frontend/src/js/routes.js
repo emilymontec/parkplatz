@@ -2,17 +2,26 @@
  * routes.js - Router Central de la Aplicación
  * Gestiona la carga dinámica de vistas y controladores.
  * Incluye autenticación JWT y validación de roles.
+ * Sistema de rutas: Rutas normales (/login, /admin, /operator) sin hash
  */
 
 // Configuración de rutas
 const routes = {
-    '/': {
+    '/login': {
         view: 'src/views/login.html',
         styles: ['src/css/login.css'],
         title: 'Login - Parkplatz',
         controller: './login.js',
         initFn: 'initLogin',
-        public: true // Ruta pública (sin token)
+        public: true
+    },
+    '/home': {
+        view: 'src/views/login.html',
+        styles: ['src/css/login.css'],
+        title: 'Inicio - Parkplatz',
+        controller: './login.js',
+        initFn: 'initLogin',
+        public: true
     },
     '/admin': {
         view: 'src/views/admin/dashboard.html',
@@ -33,10 +42,11 @@ const routes = {
 };
 
 /**
- * Función para navegar a una ruta mediante hash
+ * Función para navegar a una ruta
  */
 export const navigateTo = (path) => {
-    window.location.hash = path;
+    window.history.pushState({}, '', path);
+    router();
 };
 
 /**
@@ -105,11 +115,20 @@ export const clearAuthSession = () => {
  * Motor del Router
  */
 const router = async () => {
-    // 1. Obtener ruta actual del hash o por defecto '/'
-    let path = window.location.hash.slice(1) || '/';
+    // 1. Obtener ruta actual de pathname
+    let path = window.location.pathname;
+    
+    // Si está en raíz, redirigir a login
+    if (path === '/' || path === '') {
+        path = '/login';
+        window.history.replaceState({}, '', path);
+    }
 
     // Normalizar ruta (limpiar barras extras)
-    if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1);
+    if (path.length > 1 && path.endsWith('/')) {
+        path = path.slice(0, -1);
+        window.history.replaceState({}, '', path);
+    }
 
     // 2. Gestión de Sesión - Verificar token con backend
     let user = null;
@@ -122,8 +141,8 @@ const router = async () => {
         if (!user) {
             // Token expirado o inválido, limpiar sesión
             console.warn('Token inválido o expirado');
-            if (path !== '/') {
-                navigateTo('/');
+            if (path !== '/login') {
+                navigateTo('/login');
                 return;
             }
         }
@@ -133,23 +152,26 @@ const router = async () => {
     const config = routes[path];
 
     // Si la ruta no es pública y el usuario no está autenticado
-    if (!config?.public && !user && path !== '/') {
+    if (!config?.public && !user && path !== '/login') {
         console.warn(`Acceso denegado: Se requiere autenticación para ${path}`);
-        navigateTo('/');
+        navigateTo('/login');
         return;
     }
 
     // Si el usuario está autenticado y trata de acceder a login
-    if (user && path === '/') {
-        if (user.rol === 'ADMINISTRADOR') navigateTo('/admin');
-        else if (user.rol === 'OPERARIO') navigateTo('/operator');
+    if (user && (path === '/login' || path === '/home')) {
+        if (user.rol === 'ADMINISTRADOR') {
+            navigateTo('/admin');
+        } else if (user.rol === 'OPERARIO') {
+            navigateTo('/operator');
+        }
         return;
     }
 
     // 4. Buscar configuración de la ruta
     if (!config) {
         console.warn(`Ruta no definida: ${path}`);
-        navigateTo('/');
+        navigateTo('/login');
         return;
     }
 
@@ -163,9 +185,13 @@ const router = async () => {
             alert('No tienes permiso para acceder a esta vista');
             
             // Redirigir según el rol real del usuario
-            if (userRole === 'ADMINISTRADOR') navigateTo('/admin');
-            else if (userRole === 'OPERARIO') navigateTo('/operator');
-            else navigateTo('/');
+            if (userRole === 'ADMINISTRADOR') {
+                navigateTo('/admin');
+            } else if (userRole === 'OPERARIO') {
+                navigateTo('/operator');
+            } else {
+                navigateTo('/login');
+            }
             return;
         }
     }
@@ -250,7 +276,19 @@ function updateStyles(hrefs) {
 }
 
 // Eventos de Navegación
-window.onhashchange = router;
+window.addEventListener('popstate', router);
+
+// Manejo de clicks en links internos
+document.addEventListener('click', (e) => {
+    const link = e.target.closest('a[href^="/"]');
+    if (link && !link.target) {
+        e.preventDefault();
+        const href = link.getAttribute('href');
+        if (href) {
+            navigateTo(href);
+        }
+    }
+});
 
 // Inicio de la Aplicación
 const initApp = () => {

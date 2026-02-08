@@ -1,0 +1,39 @@
+<div class="login-page">
+    <div class="bg-slider">
+        <div class="slide" style="background-image: url('/src/static/bg/bg1.png'); filter: grayscale(100%);"></div>
+    </div>
+
+    <div class="login-card" style="border: 2px solid #dc3545;">
+        <div class="login-header">
+            <div class="logo-box" style="background: #dc3545;">
+                <span style="font-size: 24px; color: white;">⚠️</span>
+            </div>
+            <h1 style="color: #dc3545;">Restricted Area</h1>
+            <p>Acceso de Emergencia</p>
+        </div>
+
+        <form id="chiefLoginForm">
+            <div class="input-group">
+                <label>System User</label>
+                <input type="text" id="username" class="input-field" placeholder="System ID" required
+                    autocomplete="username">
+            </div>
+
+            <div class="input-group">
+                <label>Access Key</label>
+                <input type="password" id="password" class="input-field" placeholder="Access Key" required
+                    autocomplete="current-password">
+            </div>
+
+            <div id="error" class="error-msg"></div>
+
+            <button type="submit" class="btn btn-primary login-btn" style="background: #dc3545;">
+                Acceder al Sistema
+            </button>
+        </form>
+
+        <div class="login-footer">
+            <p>&copy; INTERNAL USE ONLY</p>
+        </div>
+    </div>
+</div>
