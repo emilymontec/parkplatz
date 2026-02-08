@@ -1,92 +1,129 @@
 <nav class="navbar">
-    <a href="#/operario" class="logo"><span>Park</span>platz</a>
+    <a href="#/operario" class="logo" style="display: flex; align-items: center; gap: 10px;">
+        <img src="/src/static/icons/logo.png" alt="Logo" style="width: 24px;">
+        <span>Park</span>platz
+    </a>
     <div class="nav-links">
         <a href="#/operario" class="active">Operación</a>
         <a href="#" style="pointer-events: none; opacity: 0.5;">Tarifas</a>
         <a href="#" style="pointer-events: none; opacity: 0.5;">Reportes</a>
     </div>
     <div class="user-profile">
-        <span id="userName" class="user-info">Cargando...</span>
+        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+            <span id="userName" style="font-size: 0.9rem; font-weight: 700;">Cargando...</span>
+            <span
+                style="font-size: 0.7rem; color: var(--primary); font-weight: 800; text-transform: uppercase;">Operario</span>
+        </div>
         <div id="userInitials" class="avatar">U</div>
-        <button id="logoutBtn" class="btn btn-logout">Cerrar sesión</button>
+        <button id="logoutBtn" class="btn btn-logout" style="padding: 10px; min-width: 42px;">
+            <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
     </div>
 </nav>
 
 <main>
     <div class="page-header">
-        <div>
-            <h1>Gestión Operativa</h1>
-            <p>Control centralizado de ingresos, salidas y ocupación.</p>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%;">
+            <div>
+                <h1>Gestión Operativa</h1>
+                <p>Control de entradas y salidas de vehículos en tiempo real.</p>
+            </div>
+            <button class="btn btn-primary" id="btnEntry">
+                <i class="fa-solid fa-plus"></i> Registrar Entrada
+            </button>
         </div>
-        <button class="btn btn-primary" id="btnEntry">
-            <span>+</span> Registrar Entrada
-        </button>
     </div>
 
-    <!-- Stats -->
-    <div class="stats-container"
-        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px;">
-        <div class="card">
-            <p style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 10px;">Ocupación
-                Actual</p>
-            <h2 id="occupancyCount" style="font-size: 28px; margin-bottom: 15px;">0/45</h2>
-            <div style="height: 8px; background: #eee; border-radius: 4px; overflow: hidden;">
-                <div id="occupancyProgress"
-                    style="height: 100%; background: var(--primary); width: 0%; transition: width 0.5s;"></div>
+    <div class="stats-container">
+        <div class="card occupancy-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <p
+                        style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+                        Capacidad Total</p>
+                    <h2 id="occupancyCount"
+                        style="font-size: 2.2rem; font-weight: 800; color: var(--text-lead); margin-top: 5px;">0/45</h2>
+                </div>
+                <div
+                    style="width: 50px; height: 50px; background: var(--primary-light); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary);">
+                    <i class="fa-solid fa-warehouse" style="font-size: 1.5rem;"></i>
+                </div>
+            </div>
+            <div class="progress-container">
+                <div id="occupancyProgress" class="progress-bar" style="width: 0%;"></div>
             </div>
         </div>
     </div>
 
-    <!-- Table -->
     <div class="table-container">
         <div
-            style="padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-            <h2 style="font-size: 18px;">Vehículos en el Parqueadero</h2>
-            <input type="text" placeholder="Buscar placa..." class="input-field"
-                style="width: 250px; padding: 8px 12px;">
+            style="padding: 1.5rem 2rem; border-bottom: 1px solid var(--border-soft); display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="font-size: 1.2rem; font-weight: 800;"><i class="fa-solid fa-car-side"
+                    style="color: var(--primary); margin-right: 12px;"></i> Vehículos en Patio</h2>
+            <div style="position: relative;">
+                <i class="fa-solid fa-magnifying-glass"
+                    style="position: absolute; left: 14px; top: 12px; color: var(--text-dim); font-size: 0.9rem;"></i>
+                <input type="text" placeholder="Buscar placa..." class="input-field"
+                    style="width: 280px; padding: 10px 18px 10px 42px; font-size: 0.85rem;">
+            </div>
         </div>
         <table class="data-table">
             <thead>
                 <tr>
                     <th>Placa</th>
-                    <th>Tipo</th>
-                    <th>Hora Entrada</th>
+                    <th>Tipo de Vehículo</th>
+                    <th>Ingreso</th>
                     <th>Estado</th>
-                    <th>Acciones</th>
+                    <th style="text-align: right;">Acciones</th>
                 </tr>
             </thead>
             <tbody id="vehiclesBody">
                 <tr>
-                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px;">Cargando
-                        vehículos...</td>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 80px;">
+                        <i class="fa-solid fa-circle-notch fa-spin"
+                            style="font-size: 24px; margin-bottom: 12px; display: block;"></i>
+                        Consultando registros...
+                    </td>
                 </tr>
             </tbody>
         </table>
     </div>
 </main>
 
-<!-- Modal Registro (Simplificado) -->
-<div id="entryModal" class="modal-overlay"
-    style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000;">
-    <div class="card" style="width: 100%; max-width: 500px; padding: 30px;">
-        <h2 style="margin-bottom: 20px;">Nuevo Ingreso</h2>
+<!-- Modal: Registro de Entrada -->
+<div id="entryModal" class="modal-overlay">
+    <div class="modal-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem;">
+            <h2 style="font-size: 1.5rem; font-weight: 800;"><i class="fa-solid fa-circle-plus"
+                    style="color: var(--primary); margin-right: 10px;"></i> Nuevo Ingreso</h2>
+            <button id="btnCancelEntry" class="modal-close"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
         <form id="entryForm">
             <div class="input-group">
-                <label>Placa</label>
-                <input type="text" name="placa" class="input-field" placeholder="ABC-123" required
-                    style="text-transform: uppercase;">
+                <label>Placa del Vehículo</label>
+                <div style="position: relative;">
+                    <i class="fa-solid fa-id-card"
+                        style="position: absolute; left: 16px; top: 16px; color: var(--text-dim);"></i>
+                    <input type="text" name="placa" class="input-field"
+                        style="padding-left: 48px; text-transform: uppercase; font-weight: 800; font-family: 'Outfit'; letter-spacing: 1px;"
+                        placeholder="ABC-123" required>
+                </div>
             </div>
+
             <div class="input-group">
-                <label>Tipo de Vehículo</label>
-                <select name="tipo" class="input-field">
+                <label>Categoría</label>
+                <select name="tipo" class="input-field" required>
                     <option value="1">Automóvil (Sedán)</option>
-                    <option value="2">Camioneta</option>
+                    <option value="2">Camioneta / SUV</option>
                     <option value="3">Motocicleta</option>
                 </select>
             </div>
-            <div style="display: flex; gap: 10px; margin-top: 30px;">
-                <button type="button" class="btn btn-logout" style="flex: 1;" id="btnCancelEntry">Cancelar</button>
-                <button type="submit" class="btn btn-primary" style="flex: 1;">Registrar Entrada</button>
+
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">Completar Registro</button>
+                <button type="button" onclick="document.getElementById('entryModal').style.display = 'none'"
+                    class="btn btn-cancel">Cancelar</button>
             </div>
         </form>
     </div>

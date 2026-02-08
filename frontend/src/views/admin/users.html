@@ -1,87 +1,113 @@
 <nav class="navbar">
-    <a href="#/admin" class="logo"><span>Park</span>platz</a>
+    <a href="#/admin" class="logo" style="display: flex; align-items: center; gap: 10px;">
+        <img src="/src/static/icons/logo.png" alt="Logo" style="width: 24px;">
+        <span>Park</span>platz
+    </a>
     <div class="nav-links">
         <a href="#/admin">Panel Admin</a>
         <a href="#/admin/users" class="active">Usuarios</a>
         <a href="#" style="pointer-events: none; opacity: 0.5;">Ajustes</a>
     </div>
     <div class="user-profile">
-        <span id="userName" class="user-info">Cargando...</span>
+        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+            <span id="userName" style="font-size: 0.9rem; font-weight: 700;">Cargando...</span>
+            <span
+                style="font-size: 0.7rem; color: var(--primary); font-weight: 800; text-transform: uppercase;">Administrador</span>
+        </div>
         <div id="userInitials" class="avatar">A</div>
-        <button id="logoutBtn" class="btn btn-logout">Cerrar sesión</button>
+        <button id="logoutBtn" class="btn btn-logout" style="padding: 10px; min-width: 42px;">
+            <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
     </div>
 </nav>
 
 <main>
     <div class="page-header">
-        <div>
-            <h1>Gestión de Usuarios</h1>
-            <p>Administra los usuarios del sistema, sus roles y estados.</p>
-        </div>
-        <div style="display: flex; gap: 10px;">
-            <button id="btnCreateUser" class="btn btn-primary" style="background-color: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600;">Crear Usuario</button>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%;">
+            <div>
+                <h1>Gestión de Usuarios</h1>
+                <p>Personaliza los perfiles, roles y accesos del equipo.</p>
+            </div>
+            <button id="btnCreateUser" class="btn btn-primary">
+                <i class="fa-solid fa-user-plus"></i> Crear Nuevo Usuario
+            </button>
         </div>
     </div>
 
-    <div class="card" style="padding: 0;">
+    <div class="table-container">
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Usuario</th>
-                    <th>Email</th>
+                    <th>Usuario / Perfil</th>
+                    <th>Contacto</th>
                     <th>Rol</th>
-                    <th>Nombre</th>
                     <th>Estado</th>
-                    <th>Acciones</th>
+                    <th style="text-align: right;">Acciones</th>
                 </tr>
             </thead>
             <tbody id="usersTableBody">
                 <tr>
-                    <td colspan="6" style="text-align: center; padding: 20px;">Cargando usuarios...</td>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 80px;">
+                        <i class="fa-solid fa-circle-notch fa-spin"
+                            style="font-size: 24px; margin-bottom: 12px; display: block;"></i>
+                        Cargando usuarios...
+                    </td>
                 </tr>
             </tbody>
         </table>
     </div>
 </main>
 
-<!-- Modal Crear/Editar Usuario -->
-<div id="userModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
-    <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; width: 400px; max-width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-        <h2 id="modalTitle" style="margin-bottom: 20px; color: var(--text-color);">Crear Usuario</h2>
+<!-- Modal: Crear/Editar Usuario -->
+<div id="userModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Nuevo Usuario</h2>
+            <button id="btnCancelModal" class="modal-close"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
         <form id="userForm">
             <input type="hidden" id="userId">
-            
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: var(--text-muted);">Nombre Completo</label>
-                <input type="text" id="nombres_apellidos" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
+
+            <div class="input-group">
+                <label>Nombre Completo</label>
+                <div style="position: relative;">
+                    <i class="fa-solid fa-signature"
+                        style="position: absolute; left: 16px; top: 16px; color: var(--text-dim);"></i>
+                    <input type="text" id="nombres_apellidos" class="input-field" style="padding-left: 48px;"
+                        placeholder="Ej: Juan Pérez" required>
+                </div>
             </div>
 
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: var(--text-muted);">Usuario</label>
-                <input type="text" id="username" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="input-group">
+                    <label>Username</label>
+                    <input type="text" id="username" class="input-field" placeholder="jperez" required>
+                </div>
+                <div class="input-group">
+                    <label>Rol</label>
+                    <select id="rol_id" class="input-field" required>
+                        <option value="">Cargando...</option>
+                    </select>
+                </div>
             </div>
 
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: var(--text-muted);">Email</label>
-                <input type="email" id="email" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
+            <div class="input-group">
+                <label>Email Corporativo</label>
+                <input type="email" id="email" class="input-field" placeholder="correo@ejemplo.com" required>
             </div>
 
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: var(--text-muted);">Rol</label>
-                <select id="rol_id" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
-                    <option value="">Cargando roles...</option>
-                </select>
+            <div class="input-group">
+                <label>Contraseña</label>
+                <input type="password" id="password" class="input-field" placeholder="••••••••">
+                <small id="passwordHelp"
+                    style="display: block; margin-top: 8px; color: var(--text-dim); font-size: 0.75rem;"></small>
             </div>
 
-            <div class="form-group" style="margin-bottom: 20px;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: var(--text-muted);">Contraseña</label>
-                <input type="password" id="password" placeholder="Mínimo 6 caracteres" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
-                <small id="passwordHelp" style="color: var(--text-muted); font-size: 12px;">Requerida para crear. Dejar en blanco para no cambiar al editar.</small>
-            </div>
-
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button type="button" id="btnCancelModal" class="btn" style="background: transparent; border: 1px solid var(--border); padding: 8px 16px; border-radius: 6px; cursor: pointer;">Cancelar</button>
-                <button type="submit" class="btn btn-primary" style="background-color: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Guardar</button>
+            <div style="display: grid; grid-template-columns: 1fr 150px; gap: 1rem; margin-top: 2rem;">
+                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                <button type="button" onclick="document.getElementById('userModal').classList.remove('active')"
+                    class="btn btn-cancel">Cancelar</button>
             </div>
         </form>
     </div>
