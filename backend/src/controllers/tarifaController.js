@@ -1,4 +1,5 @@
 import { supabase } from "../config/db.js";
+import { formatLocalDate } from "../utils/dateUtils.js";
 
 /**
  * Obtener todas las tarifas
@@ -23,7 +24,14 @@ export const getTarifas = async (req, res) => {
 
     if (error) throw error;
 
-    res.json(data);
+    // Formatear fechas para mostrar en timezone America/Bogota
+    const formattedData = data.map(tarifa => ({
+      ...tarifa,
+      fecha_inicio_formateada: formatLocalDate(tarifa.fecha_inicio),
+      fecha_fin_formateada: tarifa.fecha_fin ? formatLocalDate(tarifa.fecha_fin) : null
+    }));
+
+    res.json(formattedData);
   } catch (err) {
     console.error("Error getting tarifas:", err);
     res.status(500).json({ 
@@ -76,7 +84,11 @@ export const createTarifa = async (req, res) => {
 
     res.status(201).json({
       message: "Tarifa creada exitosamente",
-      tarifa: data
+      tarifa: {
+        ...data,
+        fecha_inicio_formateada: formatLocalDate(data.fecha_inicio),
+        fecha_fin_formateada: data.fecha_fin ? formatLocalDate(data.fecha_fin) : null
+      }
     });
 
   } catch (err) {
@@ -133,7 +145,11 @@ export const updateTarifa = async (req, res) => {
 
     res.json({
       message: "Tarifa actualizada exitosamente",
-      tarifa: data
+      tarifa: {
+        ...data,
+        fecha_inicio_formateada: formatLocalDate(data.fecha_inicio),
+        fecha_fin_formateada: data.fecha_fin ? formatLocalDate(data.fecha_fin) : null
+      }
     });
 
   } catch (err) {

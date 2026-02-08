@@ -9,6 +9,7 @@ import { supabase } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import registroRoutes from "./routes/registroRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import { getTimezoneInfo, formatLocalDate, formatLocalTime, formatLocalDateOnly } from "./utils/dateUtils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,7 +37,6 @@ app.use("/api/registros", registroRoutes);
 
 // Rutas de administración (protegidas: ADMINISTRADOR)
 app.use("/api/admin", adminRoutes);
-
 // ========== INICIALIZACIÓN DEL SISTEMA ==========
 
 const initializeSystem = async () => {

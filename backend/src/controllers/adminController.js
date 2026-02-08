@@ -1,4 +1,5 @@
 import { supabase } from "../config/db.js";
+import { getTodayStartUTC, getTodayEndUTC, formatLocalDate } from "../utils/dateUtils.js";
 
 /**
  * Obtener estadísticas del dashboard
@@ -13,19 +14,9 @@ export const getDashboardStats = async (req, res) => {
 
     if (errorOcupacion) throw errorOcupacion;
 
-    // 2. Ingresos/Ganancias de hoy (Ajustado a Zona Horaria Colombia GMT-5)
-    // Usamos Intl para obtener la fecha correcta en Colombia independientemente de la hora del servidor
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'America/Bogota',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    });
-    const today = formatter.format(new Date());
-    
-    // Rango del día completo en Colombia
-    const startOfDay = `${today}T00:00:00-05:00`;
-    const endOfDay = `${today}T23:59:59-05:00`;
+    // 2. Ingresos/Ganancias de hoy (America/Bogota - Colombia)
+    const startOfDay = getTodayStartUTC();
+    const endOfDay = getTodayEndUTC();
 
     const { data: ingresosData, error: errorIngresos } = await supabase
       .from("registros")
@@ -145,7 +136,9 @@ export const getRegistrosHistory = async (req, res) => {
         return {
             ...reg,
             hora_entrada: reg.entrada,
+            hora_entrada_formateada: formatLocalDate(reg.entrada),
             hora_salida: reg.salida,
+            hora_salida_formateada: reg.salida ? formatLocalDate(reg.salida) : null,
             costo_total: valorValido,
             valor_calculado: valorValido,
             tipo_vehiculo: reg.tipos_vehiculo?.nombre || 'Desconocido',
