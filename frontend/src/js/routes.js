@@ -5,6 +5,68 @@
  */
 
 /**
+ * Mostrar Alerta Personalizada (Reutiliza Modal de Confirmación)
+ */
+export const showAlert = ({ title, message, icon, btnText, type = 'info' }) => {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirmModal');
+        const titleEl = document.getElementById('confirmTitle');
+        const messageEl = document.getElementById('confirmMessage');
+        const iconEl = document.getElementById('confirmIcon');
+        const okBtn = document.getElementById('confirmOkBtn');
+        const cancelBtn = document.getElementById('confirmCancelBtn');
+        const btnContainer = okBtn.parentElement; // El div grid
+
+        if (!modal) return resolve();
+
+        // Configurar contenido
+        titleEl.textContent = title || 'Información';
+        messageEl.textContent = message || '';
+        messageEl.style.whiteSpace = 'pre-line'; // Permitir saltos de línea
+        okBtn.textContent = btnText || 'Aceptar';
+
+        // Ocultar botón cancelar y ajustar layout
+        cancelBtn.style.display = 'none';
+        btnContainer.style.gridTemplateColumns = '1fr';
+
+        // Configurar icono y color
+        let iconHtml = '<i class="fa-solid fa-circle-info"></i>';
+        let color = 'var(--primary)';
+
+        if (type === 'error') {
+            iconHtml = '<i class="fa-solid fa-circle-xmark"></i>';
+            color = 'var(--danger)';
+        } else if (type === 'success') {
+            iconHtml = '<i class="fa-solid fa-circle-check"></i>';
+            color = 'var(--success)';
+        } else if (type === 'warning') {
+            iconHtml = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            color = 'var(--warning)';
+        }
+
+        iconEl.innerHTML = icon || iconHtml;
+        iconEl.style.color = color;
+
+        // Mostrar modal
+        modal.classList.add('active');
+
+        const cleanup = () => {
+            modal.classList.remove('active');
+            // Restaurar estilos por defecto para showConfirm
+            setTimeout(() => {
+                cancelBtn.style.display = 'block';
+                btnContainer.style.gridTemplateColumns = '1fr 1fr';
+                messageEl.style.whiteSpace = 'normal';
+            }, 300);
+            okBtn.onclick = null;
+            resolve();
+        };
+
+        okBtn.onclick = () => cleanup();
+    });
+};
+
+/**
  * Mostrar cuadro de confirmación personalizado
  */
 export const showConfirm = ({ title, message, icon, okText, cancelText, type = 'warning' }) => {
@@ -236,7 +298,12 @@ const router = async () => {
 
         if (userRole !== requiredRole) {
             console.warn(`Acceso denegado: Se requiere ${requiredRole}, usuario es ${userRole}`);
-            alert('No tienes permiso para acceder a esta vista');
+            
+            await showAlert({
+                title: 'Acceso Denegado',
+                message: 'No tienes permiso para acceder a esta vista.',
+                type: 'error'
+            });
 
             // Redirigir según el rol real del usuario
             if (userRole === 'ADMINISTRADOR') navigateTo('/admin');

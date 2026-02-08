@@ -1,4 +1,6 @@
-import { getAuthHeaders, navigateTo, clearAuthSession, showConfirm } from './routes.js';
+import { getAuthHeaders, navigateTo, clearAuthSession, showConfirm, showAlert } from './routes.js';
+
+let currentVehicles = []; // Almacen local para filtrado
 
 export default function initOperator() {
     console.log('Operator Dashboard Ready');
@@ -75,18 +77,48 @@ export default function initOperator() {
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Error al registrar entrada');
 
-                alert(`Entrada registrada: ${placa}`);
+                // Confirmación visual detallada
+                const reg = data.data; // El backend devuelve { message, data: { ... } }
+                const horaEntrada = new Date(reg.entrada).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+                const codigoEspacio = reg.espacios?.codigo || 'Sin Asignar';
+                const tipoVehiculo = reg.tipos_vehiculo?.nombre || 'Vehículo';
+
+                await showAlert({
+                    title: 'Entrada Exitosa',
+                    message: `🚗 Placa: ${reg.placa}\n📍 Espacio: ${codigoEspacio}\n🕒 Hora: ${horaEntrada}\n🚙 Tipo: ${tipoVehiculo}`,
+                    type: 'success',
+                    btnText: 'Entendido'
+                });
+                
                 if (modal) modal.style.display = 'none';
                 form.reset();
                 loadVehicles();
 
             } catch (err) {
-                alert(err.message);
+                await showAlert({
+                    title: 'Error al Registrar',
+                    message: err.message,
+                    type: 'error'
+                });
             } finally {
                 btn.disabled = false;
                 btn.innerText = originalText;
             }
         };
+    }
+
+    // 7. Configurar Filtro de Búsqueda
+    const searchInput = document.getElementById('searchPlaca');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.trim().toUpperCase();
+            if (!term) {
+                renderVehicles(currentVehicles);
+                return;
+            }
+            const filtered = currentVehicles.filter(v => v.placa.includes(term));
+            renderVehicles(filtered);
+        });
     }
 }
 
@@ -139,7 +171,18 @@ async function loadVehicles() {
         }
 
         const vehicles = await res.json();
-        renderVehicles(vehicles);
+        currentVehicles = vehicles; // Actualizar store local
+
+        // Aplicar filtro si existe texto en el buscador
+        const searchInput = document.getElementById('searchPlaca');
+        if (searchInput && searchInput.value.trim()) {
+            const term = searchInput.value.trim().toUpperCase();
+            const filtered = currentVehicles.filter(v => v.placa.includes(term));
+            renderVehicles(filtered);
+        } else {
+            renderVehicles(vehicles);
+        }
+        
         updateStats(vehicles.length);
 
     } catch (err) {
@@ -207,12 +250,22 @@ window.procesarSalida = async (placa) => {
         if (!res.ok) throw new Error(data.error || 'Error al registrar salida');
 
         const total = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(data.costo_total);
-        alert(`Salida exitosa.\n\nTiempo: ${data.duracion_minutos} min\nCosto: ${total}`);
+        
+        await showAlert({
+            title: 'Salida Registrada',
+            message: `Placa: ${placa}\n\n⏱️ Tiempo: ${data.duracion_minutos} min\n💰 Costo: ${total}`,
+            type: 'success',
+            btnText: 'Aceptar'
+        });
 
         loadVehicles();
 
     } catch (err) {
-        alert(err.message);
+        await showAlert({
+            title: 'Error de Salida',
+            message: err.message,
+            type: 'error'
+        });
     }
 };
 

@@ -107,40 +107,54 @@ export const registerEntry = async (req, res) => {
       usuario_entrada: req.user.id
     };
 
-    // Manejo inteligente de Espacio ID (Auto-asignación)
+     // Manejo inteligente de Espacio ID (Auto-asignación)
     if (espacio_id) {
+      // Validar si el espacio está disponible
+      const { data: espacioValido, error: errorEspacio } = await supabase
+        .from('espacios')
+        .select('id_espacio, disponible')
+        .eq('id_espacio', espacio_id)
+        .single();
+        
+      if (errorEspacio || !espacioValido) {
+        return res.status(400).json({ error: "El espacio seleccionado no existe", code: "INVALID_SPACE" });
+      }
+      if (!espacioValido.disponible) {
+        return res.status(400).json({ error: "El espacio seleccionado ya está ocupado", code: "SPACE_OCCUPIED" });
+      }
+
       registroData.espacio_id = espacio_id;
     } else {
-      // 1. Buscar un espacio existente para este tipo de vehículo
-      // Nota: En tabla 'espacios', la columna 'espacio_id' es la FK a 'tipos_vehiculo'
-      const { data: espacioExistente, error: errorBusqueda } = await supabase
+      // 1. Buscar un espacio existente DISPONIBLE para este tipo de vehículo
+      const { data: espacioDisponible, error: errorBusqueda } = await supabase
         .from('espacios')
         .select('id_espacio')
-        .eq('espacio_id', tipo_vehiculo_id) // 'espacio_id' en tabla espacios es el tipo de vehículo
+        .eq('espacio_id', tipo_vehiculo_id) // Tipo de vehículo coincidente
+        .eq('disponible', true)             // Que esté libre
         .limit(1)
         .maybeSingle();
 
-      if (espacioExistente) {
-        registroData.espacio_id = espacioExistente.id_espacio;
+      if (espacioDisponible) {
+        registroData.espacio_id = espacioDisponible.id_espacio;
       } else {
-        // 2. Si no existe, crear uno automáticamente (Auto-provisioning)
-        // Esto soluciona el problema de tabla vacía sin necesidad de seeds manuales
-        const codigoGenerico = `GEN-${tipo_vehiculo_id}-01`;
+        // 2. Auto-provisioning: Crear nuevo espacio si no hay disponibles
+        // Generar código secuencial (simulado con timestamp corto para unicidad)
+        const suffix = Date.now().toString().slice(-4); 
+        const codigoGenerico = `GEN-${tipo_vehiculo_id}-${suffix}`;
         
         const { data: nuevoEspacio, error: errorCreacion } = await supabase
           .from('espacios')
           .insert([{
             codigo: codigoGenerico,
-            espacio_id: tipo_vehiculo_id, // Tipo de vehículo
-            disponible: true
+            espacio_id: tipo_vehiculo_id,
+            disponible: true // Se crea disponible, luego se ocupa
           }])
           .select('id_espacio')
           .single();
 
         if (errorCreacion) {
-          // Si falla (ej. código duplicado), intentar buscar de nuevo por si se creó en otra request
-          console.error("Error creando espacio automático:", errorCreacion);
-           throw new Error(`Error de configuración: No hay espacios definidos para el tipo ${tipo_vehiculo_id}`);
+           console.error("Error creando espacio automático:", errorCreacion);
+           throw new Error(`Error al asignar espacio automáticamente para tipo ${tipo_vehiculo_id}`);
         }
 
         registroData.espacio_id = nuevoEspacio.id_espacio;
@@ -157,11 +171,23 @@ export const registerEntry = async (req, res) => {
         vehiculo_id,
         espacio_id,
         entrada,
-        estado
+        estado,
+        espacios (
+          codigo
+        ),
+        tipos_vehiculo (
+          nombre
+        )
       `)
       .single();
 
     if (error) throw error;
+    
+    // Marcar espacio como OCUPADO
+    await supabase
+      .from('espacios')
+      .update({ disponible: false })
+      .eq('id_espacio', registroData.espacio_id);
     
     res.status(201).json({ 
       message: "Entrada registrada",
@@ -198,6 +224,7 @@ export const registerExit = async (req, res) => {
         id_registro,
         entrada,
         tarifa_id,
+        espacio_id,
         tarifas(valor, tipo_cobro)
       `)
       .eq("placa", placa)
@@ -261,6 +288,14 @@ export const registerExit = async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    // LIBERAR ESPACIO
+    if (registro.espacio_id) {
+      await supabase
+        .from('espacios')
+        .update({ disponible: true })
+        .eq('id_espacio', registro.espacio_id);
+    }
     
     res.json({ 
       message: "Salida registrada",
