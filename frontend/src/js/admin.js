@@ -19,6 +19,69 @@ export default function initAdmin() {
     // 3. Cargar Datos
     loadDashboardData();
     renderActivityTable();
+    setupModalListeners();
+}
+
+function setupModalListeners() {
+    const modal = document.getElementById('gananciasModal');
+    const closeBtn = document.getElementById('closeGananciasModal');
+    const closeBtn2 = document.getElementById('btnCerrarGanancias');
+
+    const closeModal = () => {
+        if (modal) modal.classList.remove('active');
+    };
+
+    if (closeBtn) closeBtn.onclick = closeModal;
+    if (closeBtn2) closeBtn2.onclick = closeModal;
+    
+    // Cerrar al hacer clic fuera
+    if (modal) {
+        modal.onclick = (e) => {
+            if (e.target === modal) closeModal();
+        };
+    }
+}
+
+function showGananciasModal(detalles) {
+    const modal = document.getElementById('gananciasModal');
+    const body = document.getElementById('detalleGananciasModalBody');
+    
+    if (!modal || !body) return;
+
+    if (!detalles || detalles.length === 0) {
+        body.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                <i class="fa-solid fa-file-invoice-dollar" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                <p>No hay ingresos registrados hoy.</p>
+            </div>
+        `;
+    } else {
+        body.innerHTML = detalles.map(detalle => `
+            <div style="margin: 12px 0; padding: 12px; background: #F8FAFC; border-radius: 8px; border: 1px solid var(--border);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong style="font-size: 0.95rem; color: var(--text-main); display: block; margin-bottom: 4px;">${detalle.nombre}</strong>
+                        <span style="font-size: 0.8rem; color: var(--text-muted); background: white; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border);">
+                            ${detalle.tipo_cobro}
+                        </span>
+                        <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 8px;">
+                            ${detalle.cantidad_registros} registro${detalle.cantidad_registros !== 1 ? 's' : ''}
+                        </span>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 1.1rem; font-weight: 700; color: var(--success);">
+                            ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(detalle.total_hoy)}
+                        </div>
+                        <span style="font-size: 0.75rem; color: var(--text-light);">
+                            Tarifa: ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(detalle.valor_tarifa || 0)}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    modal.classList.add('active');
 }
 
 async function loadDashboardData() {
@@ -47,11 +110,15 @@ async function loadDashboardData() {
         const active = document.getElementById('activeVehicles');
 
         if (income) {
+            const gananciaTotal = Number(stats.gananciasHoy) || 0;
+            // Validar que sea un número positivo válido
+            const gananciaValida = (!isNaN(gananciaTotal) && gananciaTotal >= 0) ? gananciaTotal : 0;
+            
             income.textContent = new Intl.NumberFormat('es-CO', { 
                 style: 'currency', 
                 currency: 'COP', 
                 maximumFractionDigits: 0 
-            }).format(stats.ingresosHoy || 0);
+            }).format(gananciaValida);
         }
         
         if (occupancy) {
@@ -64,6 +131,16 @@ async function loadDashboardData() {
         
         if (active) {
             active.textContent = stats.ocupacionActual || 0;
+        }
+
+        // Configurar modal de detalle de ganancias
+        const cardIngresos = document.getElementById('cardIngresos');
+        if (cardIngresos) {
+            // Remover listeners previos para evitar duplicados si se recarga
+            const newCard = cardIngresos.cloneNode(true);
+            cardIngresos.parentNode.replaceChild(newCard, cardIngresos);
+            
+            newCard.onclick = () => showGananciasModal(stats.gananciasDetalle || []);
         }
 
     } catch (err) {
@@ -145,6 +222,15 @@ async function renderActivityTable() {
             const badgeClass = isFinished ? 'badge-danger' : 'badge-success';
             // Formato de estado para mostrar
             const statusLabel = isFinished ? 'Finalizado' : 'En Curso';
+            
+            // Validar y formatear costo total
+            const costoNumerico = Number(reg.valor_calculado) || 0;
+            const costoValido = (!isNaN(costoNumerico) && costoNumerico >= 0) ? costoNumerico : 0;
+            const costoFormato = new Intl.NumberFormat('es-CO', { 
+                style: 'currency', 
+                currency: 'COP', 
+                maximumFractionDigits: 0 
+            }).format(costoValido);
 
             return `
                 <tr>
@@ -155,7 +241,7 @@ async function renderActivityTable() {
                             ${statusLabel}
                         </span>
                     </td>
-                    <td>-</td>
+                    <td style="font-weight: 600; color: var(--success);">${costoFormato}</td>
                 </tr>
             `;
         }).join('');

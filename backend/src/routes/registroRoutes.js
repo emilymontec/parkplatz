@@ -2,7 +2,9 @@ import { Router } from "express";
 import { 
   getActiveVehicles, 
   registerEntry, 
-  registerExit 
+  registerExit,
+  previewExit,
+  getQuotaStats
 } from "../controllers/registroController.js";
 import { getTiposVehiculo } from "../controllers/tarifaController.js";
 import { authenticate, authorize } from "../middlewares/authMiddleware.js";
@@ -13,11 +15,17 @@ const router = Router();
 router.use(authenticate);
 router.use(authorize(["OPERARIO", "ADMINISTRADOR"]));
 
+// Obtener estado de cupos
+router.get("/cupos", getQuotaStats);
+
 // Obtener tipos de vehículo (Necesario para el select de entrada)
 router.get("/tipos-vehiculo", getTiposVehiculo);
 
 // Obtener vehículos activos
 router.get("/activos", getActiveVehicles);
+
+// Previsualizar salida (Cálculo)
+router.get("/preview-salida", previewExit);
 
 // Registrar entrada
 router.post("/entrada", registerEntry);
