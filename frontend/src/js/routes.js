@@ -265,11 +265,39 @@ function updateStyles(hrefs) {
     });
 }
 
+// Función para configurar listeners de inactividad (logout automático)
+function setupInactivityListeners() {
+    let inactivityTimer;
+    const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutos
+
+    const resetTimer = () => {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = setTimeout(() => {
+            const token = getAuthToken();
+            if (token) {
+                console.warn('Sesión cerrada por inactividad');
+                clearAuthSession();
+                navigateTo('/');
+            }
+        }, INACTIVITY_TIMEOUT);
+    };
+
+    // Eventos de actividad
+    ['mousedown', 'keydown', 'scroll', 'touchstart'].forEach(event => {
+        document.addEventListener(event, resetTimer, true);
+    });
+
+    // Iniciar timer
+    resetTimer();
+}
+
 // Eventos de Navegación
 window.onhashchange = router;
 
 // Inicio de la Aplicación
 const initApp = () => {
+    setupInactivityListeners(); // Iniciar listeners de inactividad
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', router);
     } else {

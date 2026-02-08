@@ -1,7 +1,8 @@
 import { getAuthHeaders, clearAuthSession, navigateTo } from './routes.js';
 
 export const initUsers = async () => {
-    // Cargar usuarios iniciales
+    // Cargar roles y usuarios iniciales
+    await loadRoles();
     await loadUsers();
 
     // Event Listeners
@@ -35,26 +36,55 @@ export const initUsers = async () => {
         const userInitialsEl = document.getElementById('userInitials');
 
         if (userNameEl) userNameEl.textContent = user.nombres_apellidos || user.username;
-        if (userInitialsEl) userInitialsEl.textContent = (user.username[0] || 'A').toUpperCase();
+        if (userInitialsEl) userInitialsEl.textContent = ((user.username && user.username[0]) || 'A').toUpperCase();
+    }
+};
+
+const loadRoles = async () => {
+    try {
+        const res = await fetch('/api/admin/roles', {
+            headers: getAuthHeaders()
+        });
+
+        if (!res.ok) {
+            throw new Error(`Error HTTP: ${res.status}`);
+        }
+
+        const roles = await res.json();
+        const rolSelect = document.getElementById('rol_id');
+        
+        if (rolSelect) {
+            rolSelect.innerHTML = roles.map(rol => 
+                `<option value="${rol.id_rol}">${rol.nombre}</option>`
+            ).join('');
+        }
+    } catch (err) {
+        console.error("Error en loadRoles:", err);
     }
 };
 
 const loadUsers = async () => {
     try {
+        console.log("Cargando usuarios...");
         const res = await fetch('/api/admin/usuarios', {
             headers: getAuthHeaders()
         });
 
-        if (!res.ok) throw new Error('Error cargando usuarios');
+        if (!res.ok) {
+            throw new Error(`Error HTTP: ${res.status}`);
+        }
 
         const users = await res.json();
+        console.log("Usuarios cargados:", users);
         renderTable(users);
     } catch (err) {
-        console.error(err);
+        console.error("Error en loadUsers:", err);
         const tbody = document.getElementById('usersTableBody');
         if (tbody) {
             tbody.innerHTML = `
-                <tr><td colspan="6" style="text-align: center; color: red;">Error al cargar usuarios</td></tr>
+                <tr><td colspan="6" style="text-align: center; color: red;">
+                    Error al cargar usuarios: ${err.message}
+                </td></tr>
             `;
         }
     }
@@ -146,9 +176,7 @@ const openModal = (user = null) => {
         document.getElementById('nombres_apellidos').value = user.nombres_apellidos;
         document.getElementById('username').value = user.username;
         document.getElementById('email').value = user.email;
-        // Mapeo simple de roles (1: ADMIN, 2: OPERARIO) - Ajustar según DB real
-        const roleId = user.rol_id || (user.rol === 'ADMINISTRADOR' ? 1 : 2);
-        document.getElementById('rol_id').value = roleId;
+        document.getElementById('rol_id').value = user.rol_id;
 
         document.getElementById('password').required = false;
         passwordHelp.textContent = 'Dejar en blanco para mantener la actual.';
@@ -171,11 +199,17 @@ const handleFormSubmit = async (e) => {
     const userId = document.getElementById('userId').value;
     const isEdit = !!userId;
 
+    const rolIdVal = document.getElementById('rol_id').value;
+    if (!rolIdVal) {
+        alert("Por favor seleccione un rol");
+        return;
+    }
+
     const formData = {
         nombres_apellidos: document.getElementById('nombres_apellidos').value,
         username: document.getElementById('username').value,
         email: document.getElementById('email').value,
-        rol_id: parseInt(document.getElementById('rol_id').value),
+        rol_id: parseInt(rolIdVal),
         password: document.getElementById('password').value
     };
 
@@ -207,5 +241,19 @@ const handleFormSubmit = async (e) => {
     } catch (err) {
         console.error(err);
         alert(err.message);
+    }
+};
+
+const handleLogout = async () => {
+    try {
+        await fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: getAuthHeaders()
+        });
+    } catch (error) {
+        console.error("Logout error", error);
+    } finally {
+        clearAuthSession();
+        navigateTo('/');
     }
 };

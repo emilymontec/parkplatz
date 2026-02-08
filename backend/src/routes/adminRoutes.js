@@ -3,6 +3,7 @@ import {
   getDashboardStats,
   getRegistrosHistory,
   getUsers,
+  getRoles,
   createUser,
   updateUser,
   toggleUserStatus
@@ -22,6 +23,7 @@ router.get("/stats", getDashboardStats);
 router.get("/registros", getRegistrosHistory);
 
 // Gestión de usuarios
+router.get("/roles", getRoles);
 router.get("/usuarios", getUsers);
 router.post("/usuarios", createUser);
 router.put("/usuarios/:id", updateUser);

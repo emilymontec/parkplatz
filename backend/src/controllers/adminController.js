@@ -113,6 +113,29 @@ export const getRegistrosHistory = async (req, res) => {
 };
 
 /**
+ * Obtener listado de roles
+ * Ruta protegida: Solo ADMINISTRADOR
+ */
+export const getRoles = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("roles")
+      .select("*")
+      .order("nombre", { ascending: true });
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (err) {
+    console.error("Error getting roles:", err);
+    res.status(500).json({
+      error: err.message,
+      code: "DB_ERROR"
+    });
+  }
+};
+
+/**
  * Obtener listado de usuarios (gestión)
  * Ruta protegida: Solo ADMINISTRADOR
  */
@@ -244,6 +267,22 @@ export const updateUser = async (req, res) => {
   }
 
   try {
+    // Validar que el rol existe si se está actualizando
+    if (rol_id) {
+      const { data: roleExists, error: roleError } = await supabase
+        .from("roles")
+        .select("id_rol")
+        .eq("id_rol", rol_id)
+        .single();
+
+      if (roleError || !roleExists) {
+        return res.status(400).json({
+          error: "El rol seleccionado no es válido",
+          code: "INVALID_ROLE"
+        });
+      }
+    }
+
     const updates = {};
     if (username) updates.username = username;
     if (email) updates.email = email;
