@@ -99,7 +99,15 @@ const renderTable = (users) => {
     tbody.innerHTML = users.map(user => `
         <tr>
             <td>
-                <div style="font-weight: 500;">${user.username}</div>
+                <div class="user-cell-info">
+                    <div class="user-avatar-sm">
+                        ${getInitials(user.nombres_apellidos || user.username)}
+                    </div>
+                    <div>
+                        <div style="font-weight: 500;">${user.nombres_apellidos}</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">@${user.username}</div>
+                    </div>
+                </div>
             </td>
             <td>${user.email}</td>
             <td>
@@ -110,7 +118,6 @@ const renderTable = (users) => {
                     ${user.rol}
                 </span>
             </td>
-            <td>${user.nombres_apellidos}</td>
             <td>
                 <span style="color: ${user.activo ? 'var(--success)' : 'var(--danger)'}; font-weight: 500;">
                     ${user.activo ? 'Activo' : 'Inactivo'}
@@ -194,6 +201,17 @@ const openModal = (user = null) => {
         document.getElementById('password').required = true;
         passwordHelp.textContent = 'Requerida para crear.';
     }
+};
+
+const getInitials = (name) => {
+    if (!name) return '??';
+    return name
+        .split(' ')
+        .filter(word => word.length > 0)
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .substring(0, 2);
 };
 
 const closeModal = () => {
