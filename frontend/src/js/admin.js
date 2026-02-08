@@ -20,6 +20,7 @@ export default function initAdmin() {
 
     // 3. Cargar Datos
     loadDashboardData();
+    renderActivityTable();
 }
 
 async function loadDashboardData() {
@@ -92,7 +93,73 @@ async function handleLogout() {
     }
 }
 
-// TODO: Implementar endpoint para historial reciente
-function renderActivityTable() {
-    // ...
+async function renderActivityTable() {
+    const tableBody = document.getElementById('activityTable');
+    if (!tableBody) return;
+
+    try {
+        const res = await fetch('/api/admin/registros?limit=10', {
+            method: 'GET',
+            headers: getAuthHeaders()
+        });
+
+        if (res.status === 401) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="4" style="text-align: center; color: var(--danger); padding: 40px;">
+                        Sesión expirada. Por favor recarga.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
+
+        const responseData = await res.json();
+        // Support both { data: [...] } and [...] formats
+        const data = Array.isArray(responseData) ? responseData : (responseData.data || []);
+
+        if (!data || data.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 40px;">
+                        Sin registros
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tableBody.innerHTML = data.map(reg => {
+            const entryTime = new Date(reg.entrada).toLocaleString('es-CO');
+            const isFinished = reg.estado === 'FINALIZADO';
+            const badgeClass = isFinished ? 'badge-danger' : 'badge-success';
+            // Formato de estado para mostrar
+            const statusLabel = isFinished ? 'Finalizado' : 'En Curso';
+
+            return `
+                <tr>
+                    <td>${entryTime}</td>
+                    <td>${reg.placa}</td>
+                    <td>
+                        <span class="badge ${badgeClass}">
+                            ${statusLabel}
+                        </span>
+                    </td>
+                    <td>-</td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error('Error rendering activity table:', err);
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="4" style="text-align: center; color: var(--danger); padding: 40px;">
+                    Error cargando registros
+                </td>
+            </tr>
+        `;
+    }
 }

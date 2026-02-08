@@ -69,6 +69,35 @@ export const registerEntry = async (req, res) => {
       });
     }
 
+    // VERIFICAR CAPACIDAD
+    // Obtener configuración de capacidad (Hardcoded por ahora)
+    const CAPACITY = {
+      AUTO: 30, // IDs 1 (Sedan) y 2 (Camioneta)
+      MOTO: 15  // ID 3 (Moto)
+    };
+
+    // Determinar categoría
+    const isMoto = parseInt(tipo_vehiculo_id) === 3;
+    const isAuto = !isMoto; // 1 y 2
+
+    // Contar vehículos activos de la misma categoría
+    const { count, error: countError } = await supabase
+      .from("registros")
+      .select("id_registro", { count: "exact", head: true })
+      .eq("estado", "EN_CURSO")
+      .in("vehiculo_id", isMoto ? [3] : [1, 2]);
+
+    if (countError) throw countError;
+
+    const limit = isMoto ? CAPACITY.MOTO : CAPACITY.AUTO;
+    
+    if (count >= limit) {
+      return res.status(400).json({
+        error: `No hay cupos disponibles para ${isMoto ? 'Motos' : 'Autos'}`,
+        code: "FULL_CAPACITY"
+      });
+    }
+
     // Preparar datos para insertar
     const registroData = {
       placa,

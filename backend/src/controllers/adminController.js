@@ -33,8 +33,8 @@ export const getDashboardStats = async (req, res) => {
 
     const active = activeVehicles?.length || 0;
 
-    // Capacidad total (ejemplo: 100 espacios)
-    const totalCapacity = 100;
+    // Capacidad total (30 autos + 15 motos)
+    const totalCapacity = 45;
     const occupancy = Math.round((active / totalCapacity) * 100);
 
     res.json({

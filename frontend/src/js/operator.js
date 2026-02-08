@@ -135,7 +135,11 @@ function renderVehicles(vehicles) {
 
     tbody.innerHTML = vehicles.map(v => {
         const horaEntrada = new Date(v.hora_entrada).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const tipo = v.tipo_vehiculo_id == 1 ? 'Automóvil' : (v.tipo_vehiculo_id == 2 ? 'Motocicleta' : 'Otro');
+        
+        let tipo = 'Otro';
+        if (v.tipo_vehiculo_id == 1) tipo = 'Automóvil';
+        else if (v.tipo_vehiculo_id == 2) tipo = 'Camioneta';
+        else if (v.tipo_vehiculo_id == 3) tipo = 'Motocicleta';
         
         return `
         <tr>
@@ -210,13 +214,13 @@ async function handleLogout() {
 }
 
 function updateStats(count) {
-    const total = 50; // Capacidad total
+    const total = 45; // Capacidad total (30 autos + 15 motos)
     const countEl = document.getElementById('occupancyCount');
     const progressEl = document.getElementById('occupancyProgress');
 
     if (countEl) countEl.textContent = `${count}/${total}`;
     if (progressEl) {
-        const percent = (count / total) * 100;
+        const percent = Math.min((count / total) * 100, 100);
         progressEl.style.width = `${percent}%`;
     }
 }
