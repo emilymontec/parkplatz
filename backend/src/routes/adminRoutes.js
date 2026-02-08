@@ -3,6 +3,8 @@ import {
   getDashboardStats,
   getRegistrosHistory,
   getUsers,
+  createUser,
+  updateUser,
   toggleUserStatus
 } from "../controllers/adminController.js";
 import { authenticate, authorize } from "../middlewares/authMiddleware.js";
@@ -21,6 +23,8 @@ router.get("/registros", getRegistrosHistory);
 
 // Gestión de usuarios
 router.get("/usuarios", getUsers);
+router.post("/usuarios", createUser);
+router.put("/usuarios/:id", updateUser);
 router.patch("/usuarios/:id/toggle", toggleUserStatus);
 
 export default router;

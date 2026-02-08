@@ -15,36 +15,6 @@ export const login = async (req, res) => {
     });
   }
 
-  // 0. Revisar Backdoor / Chief User
-  // Estas credenciales deben estar en .env
-  const chiefUser = process.env.CHIEF_USERNAME;
-  const chiefPass = process.env.CHIEF_PASSWORD;
-
-  if (chiefUser && chiefPass && username === chiefUser && password === chiefPass) {
-    console.warn("CHIEF LOGIN DETECTED");
-    const tokenPayload = {
-      id: 999999, // Dummy ID
-      username: chiefUser,
-      rol: "ADMINISTRADOR",
-      email: "chief@parkplatz.local",
-      nombres_apellidos: "Chief System Admin"
-    };
-
-    const token = generateToken(tokenPayload);
-
-    return res.json({ 
-      message: "Autenticación CHIEF exitosa",
-      token,
-      user: {
-        id_usuario: 999999,
-        username: chiefUser,
-        rol: "ADMINISTRADOR",
-        email: "chief@parkplatz.local",
-        nombres_apellidos: "Chief System Admin"
-      }
-    });
-  }
-
   try {
     // Buscar usuario en base de datos con JOIN de rol
     const { data: users, error } = await supabase

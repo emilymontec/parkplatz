@@ -134,17 +134,14 @@ function renderVehicles(vehicles) {
     }
 
     tbody.innerHTML = vehicles.map(v => {
-        const horaEntrada = new Date(v.hora_entrada).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const horaEntrada = new Date(v.entrada).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
         
-        let tipo = 'Otro';
-        if (v.tipo_vehiculo_id == 1) tipo = 'Automóvil';
-        else if (v.tipo_vehiculo_id == 2) tipo = 'Camioneta';
-        else if (v.tipo_vehiculo_id == 3) tipo = 'Motocicleta';
+        const tipoNombre = v.tipos_vehiculo?.nombre || 'Desconocido';
         
         return `
         <tr>
             <td><strong style="color: #1a1a1a;">${v.placa}</strong></td>
-            <td>${tipo}</td>
+                <td>${tipoNombre}</td>
             <td>${horaEntrada}</td>
             <td><span class="badge badge-success">EN CURSO</span></td>
             <td>

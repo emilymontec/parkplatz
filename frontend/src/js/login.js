@@ -44,7 +44,7 @@ export default function initLogin() {
             if (userRole === 'ADMINISTRADOR') {
                 navigateTo('/admin');
             } else if (userRole === 'OPERARIO') {
-                navigateTo('/operator');
+                navigateTo('/operario');
             } else {
                 throw new Error('Rol de usuario desconocido: ' + userRole);
             }
