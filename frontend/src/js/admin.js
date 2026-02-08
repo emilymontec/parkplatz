@@ -1,4 +1,4 @@
-import { getAuthHeaders, navigateTo, clearAuthSession } from './routes.js';
+import { getAuthHeaders, navigateTo, clearAuthSession, showAlert } from './routes.js';
 
 export default function initAdmin() {
     console.log('Admin Dashboard Ready');
@@ -51,18 +51,28 @@ async function loadDashboardData() {
                 style: 'currency', 
                 currency: 'COP', 
                 maximumFractionDigits: 0 
-            }).format(stats.income);
+            }).format(stats.ingresosHoy || 0);
         }
+        
         if (occupancy) {
-            occupancy.textContent = stats.occupancy + '%';
+            // Capacidad total hardcoded a 45 (según backend)
+            const totalCapacity = 45;
+            const current = stats.ocupacionActual || 0;
+            const percentage = Math.min((current / totalCapacity) * 100, 100).toFixed(0);
+            occupancy.textContent = percentage + '%';
         }
+        
         if (active) {
-            active.textContent = stats.active;
+            active.textContent = stats.ocupacionActual || 0;
         }
 
     } catch (err) {
         console.error('Error cargando datos:', err);
-        alert('Error cargando estadísticas: ' + err.message);
+        await showAlert({
+            title: 'Error de Dashboard',
+            message: 'Error cargando estadísticas: ' + err.message,
+            type: 'error'
+        });
     }
 }
 

@@ -188,6 +188,7 @@ async function loadVehicles() {
     } catch (err) {
         console.error(err);
         tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red; padding: 20px;">Error: ${err.message}</td></tr>`;
+        updateStats(0); // Resetear stats en error
     }
 }
 
@@ -298,8 +299,15 @@ function updateStats(count) {
     const total = 45; // Capacidad total (30 autos + 15 motos)
     const countEl = document.getElementById('occupancyCount');
     const progressEl = document.getElementById('occupancyProgress');
+    const headerCountEl = document.getElementById('vehiclesCountHeader');
 
     if (countEl) countEl.textContent = `${count}/${total}`;
+    
+    if (headerCountEl) {
+        headerCountEl.textContent = `(${count} / ${total})`;
+        headerCountEl.style.display = 'inline-block'; // Asegurar visibilidad
+    }
+
     if (progressEl) {
         const percent = Math.min((count / total) * 100, 100);
         progressEl.style.width = `${percent}%`;

@@ -1,4 +1,4 @@
-import { getAuthHeaders, navigateTo, clearAuthSession } from './routes.js';
+import { getAuthHeaders, navigateTo, clearAuthSession, showConfirm, showAlert } from './routes.js';
 
 let tarifas = [];
 let tiposVehiculo = [];
@@ -256,12 +256,20 @@ function setupModal() {
 
             modal.classList.remove('active');
             loadTarifas();
-            // Show success toast (implement toast later)
-            alert(currentTarifaId ? 'Tarifa actualizada' : 'Tarifa creada');
+            
+            await showAlert({
+                title: 'Éxito',
+                message: currentTarifaId ? 'Tarifa actualizada correctamente' : 'Tarifa creada exitosamente',
+                type: 'success'
+            });
 
         } catch (err) {
             console.error(err);
-            alert(err.message);
+            await showAlert({
+                title: 'Error',
+                message: err.message,
+                type: 'error'
+            });
         }
     });
 
@@ -284,7 +292,13 @@ function setupModal() {
     };
 
     window.toggleTarifa = async (id, nuevoEstado) => {
-        if (!confirm(`¿Estás seguro de ${nuevoEstado ? 'activar' : 'desactivar'} esta tarifa?`)) return;
+        const confirmed = await showConfirm({
+            title: nuevoEstado ? 'Activar Tarifa' : 'Desactivar Tarifa',
+            message: `¿Estás seguro de que deseas ${nuevoEstado ? 'activar' : 'desactivar'} esta tarifa?`,
+            type: nuevoEstado ? 'success' : 'warning'
+        });
+
+        if (!confirmed) return;
 
         try {
             const res = await fetch(`/api/admin/tarifas/${id}/toggle`, {
@@ -302,7 +316,11 @@ function setupModal() {
 
         } catch (err) {
             console.error(err);
-            alert(err.message);
+            await showAlert({
+                title: 'Error',
+                message: err.message,
+                type: 'error'
+            });
         }
     };
 }

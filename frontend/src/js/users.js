@@ -1,4 +1,4 @@
-import { getAuthHeaders, clearAuthSession, navigateTo, showConfirm } from './routes.js';
+import { getAuthHeaders, clearAuthSession, navigateTo, showConfirm, showAlert } from './routes.js';
 
 export const initUsers = async () => {
     // Cargar roles y usuarios iniciales
@@ -166,11 +166,19 @@ const renderTable = (users) => {
             if (res.ok) {
                 loadUsers();
             } else {
-                alert('Error al cambiar estado');
+                await showAlert({
+                    title: 'Error',
+                    message: 'Error al cambiar estado',
+                    type: 'error'
+                });
             }
         } catch (err) {
             console.error(err);
-            alert('Error de conexión');
+            await showAlert({
+                title: 'Error de Conexión',
+                message: 'No se pudo conectar con el servidor',
+                type: 'error'
+            });
         }
     };
 };
@@ -226,7 +234,11 @@ const handleFormSubmit = async (e) => {
 
     const rolIdVal = document.getElementById('rol_id').value;
     if (!rolIdVal) {
-        alert("Por favor seleccione un rol");
+        await showAlert({
+            title: 'Campo Requerido',
+            message: 'Por favor seleccione un rol',
+            type: 'warning'
+        });
         return;
     }
 
@@ -261,11 +273,19 @@ const handleFormSubmit = async (e) => {
 
         closeModal();
         loadUsers();
-        alert(isEdit ? 'Usuario actualizado' : 'Usuario creado exitosamente');
+        await showAlert({
+            title: 'Éxito',
+            message: isEdit ? 'Usuario actualizado correctamente' : 'Usuario creado exitosamente',
+            type: 'success'
+        });
 
     } catch (err) {
         console.error(err);
-        alert(err.message);
+        await showAlert({
+            title: 'Error',
+            message: err.message,
+            type: 'error'
+        });
     }
 };
 
