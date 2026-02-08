@@ -1,16 +1,47 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Parkplatz</title>
-    <link rel="stylesheet" href="./src/css/index.css">
-</head>
-<body>
-    <div id="app">
-        <!-- Las vistas se renderizarán aquí -->
-    </div>
+    <title>Parkplatz - Sistema de Gestión</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="./src/static/icons/logo.png">
+    <!-- Base styles -->
+    <link rel="stylesheet" href="./src/css/global.css">
+    <style>
+        /* Minimal loading state */
+        #app:empty {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #F8F9FA;
+        }
 
-    <script type="module" src="./src/js/index.js"></script>
+        #app:empty::after {
+            content: "";
+            width: 30px;
+            height: 30px;
+            border: 3px solid #FF7F0022;
+            border-top-color: #FF7F00;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app"></div>
+
+    <!-- Main Entry Point -->
+    <script type="module" src="./src/js/routes.js"></script>
 </body>
+
 </html>

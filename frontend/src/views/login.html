@@ -1,44 +1,41 @@
-<div class="background-slider">
-    <div class="slide" style="background-image: url('./src/static/bg/bg1.png')"></div>
-    <div class="slide" style="background-image: url('./src/static/bg/bg2.png')"></div>
-    <div class="slide" style="background-image: url('./src/static/bg/bg3.png')"></div>
-</div>
-<div class="overlay"></div>
+<div class="login-page">
+    <div class="bg-slider">
+        <div class="slide" style="background-image: url('/src/static/bg/bg1.png')"></div>
+        <div class="slide" style="background-image: url('/src/static/bg/bg2.png')"></div>
+        <div class="slide" style="background-image: url('/src/static/bg/bg3.png')"></div>
+    </div>
 
-<div class="login-wrapper">
-    <div class="login-container">
+    <div class="login-card">
         <div class="login-header">
-            <div class="logo-circle">
-                <img src="./src/static/icons/logo.png" alt="Parkplatz Logo" style="width: 100%; height: 100%; object-fit: contain;">
+            <div class="logo-box">
+                <img src="/src/static/icons/logo.png" alt="Logo">
             </div>
             <h1>Parkplatz</h1>
-            <p class="subtitle">Sistema de Gestión de Estacionamientos</p>
+            <p>Sistema de Gestión Inteligente</p>
         </div>
-        
+
         <form id="loginForm">
             <div class="input-group">
-                <label for="username">Usuario</label>
-                <div class="input-wrapper">
-                    <input type="text" id="username" name="username" placeholder="Ingresa tu usuario" required>
-                </div>
+                <label>Nombre de Usuario</label>
+                <input type="text" id="username" class="input-field" placeholder="ej. admin01" required
+                    autocomplete="username">
             </div>
-            
+
             <div class="input-group">
-                <label for="password">Contraseña</label>
-                <div class="input-wrapper">
-                    <input type="password" id="password" name="password" placeholder="••••••••" required>
-                </div>
+                <label>Contraseña</label>
+                <input type="password" id="password" class="input-field" placeholder="••••••••" required
+                    autocomplete="current-password">
             </div>
-            
-            <button type="submit">
-                <span>Ingresar</span>
+
+            <div id="error" class="error-msg"></div>
+
+            <button type="submit" class="btn btn-primary login-btn">
+                Iniciar Sesión
             </button>
-            
-            <div id="error" class="error"></div>
         </form>
-        
+
         <div class="login-footer">
-            <p>&copy; 2026 StudyCLUB</p>
+            <p>&copy; 2026 Parkplatz Solution</p>
         </div>
     </div>
 </div>

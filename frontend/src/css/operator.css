@@ -1,0 +1,99 @@
+.action-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 3rem;
+}
+
+.vehicle-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.vehicle-card {
+    background: var(--bg-card);
+    padding: 2rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-soft);
+    position: relative;
+    transition: var(--transition-smooth);
+}
+
+.vehicle-card:hover {
+    transform: translateY(-5px);
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.status-indicator {
+    padding: 0.4rem 1rem;
+    border-radius: 2rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    display: inline-block;
+    margin-bottom: 1rem;
+}
+
+.status-available {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+.status-occupied {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+
+.plate-number {
+    font-size: 1.75rem;
+    font-weight: 800;
+    margin: 1rem 0;
+    letter-spacing: 0.05em;
+    color: var(--text-lead);
+}
+
+/* Modal System */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.85);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: var(--transition-smooth);
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.modal-card {
+    background: var(--bg-surface);
+    padding: 3rem;
+    border-radius: var(--radius-lg);
+    width: 95%;
+    max-width: 550px;
+    border: 1px solid var(--border-soft);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    transform: scale(0.95);
+    transition: var(--transition-smooth);
+}
+
+.modal-overlay.active .modal-card {
+    transform: scale(1);
+}
+
+.modal-title {
+    font-size: 1.5rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
