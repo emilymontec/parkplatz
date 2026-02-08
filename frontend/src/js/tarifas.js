@@ -96,7 +96,7 @@ function renderTable() {
     if (tarifas.length === 0) {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 40px;">
+                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 40px;">
                     No hay tarifas registradas.
                 </td>
             </tr>
@@ -120,34 +120,65 @@ function renderTable() {
 
         const fechaInicio = new Date(tarifa.fecha_inicio).toLocaleDateString('es-CO');
         const fechaFin = tarifa.fecha_fin ? new Date(tarifa.fecha_fin).toLocaleDateString('es-CO') : 'Indefinida';
+        
+        // Icon logic
+        const tipoNombre = (tarifa.tipos_vehiculo?.nombre || '').toLowerCase();
+        let icon = 'fa-car-side';
+        let iconBg = '#EFF6FF'; // Blueish
+        let iconColor = '#2563EB';
+
+        if (tipoNombre.includes('moto')) {
+            icon = 'fa-motorcycle';
+            iconBg = '#FFF7ED'; // Orangeish
+            iconColor = '#EA580C';
+        }
 
         return `
             <tr>
-                <td style="font-weight: 600;">${tarifa.nombre}</td>
                 <td>
-                    <span style="background: #EFF6FF; color: #1E40AF; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">
-                        ${tarifa.tipos_vehiculo?.nombre || 'Desconocido'}
+                    <div class="user-cell-info">
+                        <div class="user-avatar-sm" style="background: ${iconBg}; color: ${iconColor}; font-size: 1rem;">
+                            <i class="fa-solid ${icon}"></i>
+                        </div>
+                        <div>
+                            <div style="font-weight: 600; color: var(--text-main);">${tarifa.nombre}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 500;">
+                                ${tarifa.tipos_vehiculo?.nombre || 'General'}
+                            </div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge" style="background: #F8FAFC; border: 1px solid var(--border); color: var(--text-main); font-weight: 500;">
+                        ${tipoCobroMap[tarifa.tipo_cobro] || tarifa.tipo_cobro}
                     </span>
                 </td>
-                <td>${tipoCobroMap[tarifa.tipo_cobro] || tarifa.tipo_cobro}</td>
-                <td style="font-weight: 700;">${valorFormatted}</td>
-                <td style="font-size: 0.85rem;">
-                    <div>Desde: ${fechaInicio}</div>
-                    <div style="color: var(--text-muted);">Hasta: ${fechaFin}</div>
+                <td>
+                    <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-main);">${valorFormatted}</div>
                 </td>
                 <td>
-                    <span class="status-badge ${tarifa.activo ? 'status-active' : 'status-inactive'}">
+                    <div style="font-size: 0.75rem; display: flex; flex-direction: column; gap: 4px;">
+                        <span style="display: flex; align-items: center; gap: 6px; color: var(--text-main);">
+                            <i class="fa-regular fa-calendar-check" style="color: var(--success);"></i> ${fechaInicio}
+                        </span>
+                        <span style="display: flex; align-items: center; gap: 6px; color: var(--text-muted);">
+                            <i class="fa-regular fa-calendar-xmark" style="color: var(--text-light);"></i> ${fechaFin}
+                        </span>
+                    </div>
+                </td>
+                <td>
+                    <span style="color: ${tarifa.activo ? 'var(--success)' : 'var(--danger)'}; font-weight: 600; font-size: 0.875rem;">
                         ${tarifa.activo ? 'Activa' : 'Inactiva'}
                     </span>
                 </td>
                 <td>
-                    <div class="action-buttons">
-                        <button class="btn-icon btn-edit" onclick="window.editTarifa(${tarifa.id_tarifa})" title="Editar">
-                            <i class="fa-solid fa-pen"></i>
+                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                        <button class="btn-action" onclick="window.editTarifa(${tarifa.id_tarifa})" title="Editar">
+                            <i class="fa-solid fa-pen-to-square"></i>
                         </button>
-                        <button class="btn-icon btn-toggle" onclick="window.toggleTarifa(${tarifa.id_tarifa}, ${!tarifa.activo})" 
-                            title="${tarifa.activo ? 'Desactivar' : 'Activar'}"
-                            style="color: ${tarifa.activo ? 'var(--danger)' : 'var(--success)'};">
+                        <button class="btn-action ${tarifa.activo ? 'btn-toggle-off' : 'btn-toggle-on'}" 
+                                onclick="window.toggleTarifa(${tarifa.id_tarifa}, ${!tarifa.activo})" 
+                                title="${tarifa.activo ? 'Desactivar' : 'Activar'}">
                             <i class="fa-solid ${tarifa.activo ? 'fa-ban' : 'fa-check'}"></i>
                         </button>
                     </div>

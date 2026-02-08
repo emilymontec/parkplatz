@@ -230,14 +230,15 @@ main {
 }
 
 .data-table th {
-    background: #F8FAFC;
+    background: var(--bg-main);
     color: var(--text-muted);
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
-    padding: 0.75rem 1rem;
+    padding: 0.875rem 1rem;
     text-align: left;
     border-bottom: 1px solid var(--border);
+    letter-spacing: 0.05em;
 }
 
 .data-table td {
