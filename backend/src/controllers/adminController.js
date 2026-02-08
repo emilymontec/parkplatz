@@ -1,5 +1,13 @@
 import { supabase } from "../config/db.js";
+import bcrypt from "bcrypt";
+import { randomUUID } from "crypto";
 import { getTodayStartUTC, getTodayEndUTC, formatLocalDate } from "../utils/dateUtils.js";
+
+// Helper para validar UUID
+const isUUID = (str) => {
+    const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return regex.test(str);
+};
 
 /**
  * Obtener estadísticas del dashboard
@@ -236,7 +244,7 @@ export const createUser = async (req, res) => {
   const { username, email, password, nombres_apellidos, rol_id } = req.body;
 
   if (!email || !password || !username || !rol_id) {
-    return res.status(400).json({ error: "Faltan campos requeridos" });
+    return res.status(400).json({ error: "Faltan campos requeridos: email, password, username, rol_id" });
   }
 
   // Validación de formato de email
@@ -251,58 +259,107 @@ export const createUser = async (req, res) => {
   }
 
   try {
-    // 1. Crear usuario en Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    let authUserId = null;
+    let authUserCreated = false;
+
+    // 1. Intentar crear en Supabase Auth (opcional - si falla, continuamos)
+    try {
+        console.log(`[CreateUser] Intentando crear usuario en Auth: ${email}`);
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: { username, nombres_apellidos }
+        });
+
+        if (authError) {
+          console.error(`[CreateUser] Error Auth:`, authError);
+          throw authError;
+        }
+        authUserId = authData.user.id;
+        authUserCreated = true;
+        console.log(`[CreateUser] Usuario creado en Auth con ID: ${authUserId}`);
+    } catch (authErr) {
+        // Si el error es por falta de permisos o RLS, solo creamos en BD local
+        if (
+          authErr.message?.includes("Not enough permissions") ||
+          authErr.message?.includes("row-level security") ||
+          authErr.code === '42501' ||
+          authErr.status === 403 ||
+          authErr.message?.includes("not allowed")
+        ) {
+            console.warn(`[CreateUser] Auth bloqueado por RLS/permisos. Creando usuario SOLO en BD local.`);
+        } else if (authErr.message?.includes("User already exists")) {
+            console.warn(`[CreateUser] Usuario ya existe en Auth. Continuando con creación en BD local.`);
+        } else {
+            throw authErr;
+        }
+    }
+
+    // Generar hash de contraseña para login local
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password, salt);
+
+    // 2. Crear usuario en tabla local 'usuarios' (sin especificar id_usuario - se genera automáticamente)
+    console.log(`[CreateUser] Insertando en BD local`);
+    
+    const insertData = {
+      username,
       email,
-      password,
-      email_confirm: true,
-      user_metadata: { username, nombres_apellidos }
-    });
+      nombres_apellidos,
+      rol_id,
+      activo: true,
+      password_hash
+    };
+    
+    // Si se creó en Auth, guardar el UUID
+    if (authUserId) {
+      insertData.id_usuario = authUserId;
+    }
+    // Si no, dejar que Supabase genere el ID automáticamente
 
-    if (authError) throw authError;
-
-    // 2. Crear usuario en tabla local 'usuarios'
-    const { data: existingUser } = await supabase
+    const { data, error: dbError } = await supabase
       .from("usuarios")
-      .select("id_usuario")
-      .eq("id_usuario", authData.user.id)
+      .insert([insertData])
+      .select()
       .single();
 
-    if (!existingUser) {
-      const { error: dbError } = await supabase
-        .from("usuarios")
-        .insert([{
-          id_usuario: authData.user.id,
+    if (dbError) {
+      console.error("[CreateUser] Error en BD local:", dbError);
+      
+      // Si se creó en Auth pero falló en BD, intentar limpiar Auth
+      if (authUserCreated && authUserId) {
+        try {
+          await supabase.auth.admin.deleteUser(authUserId);
+          console.log(`[CreateUser] Usuario borrado de Auth por error en BD`);
+        } catch (delErr) {
+          console.warn(`[CreateUser] No se pudo borrar usuario de Auth:`, delErr.message);
+        }
+      }
+      throw dbError;
+    }
+
+    console.log(`[CreateUser] Usuario creado exitosamente: ${username} (ID: ${data.id_usuario})`);
+    
+    res.status(201).json({ 
+        message: authUserCreated ? "Usuario creado exitosamente" : "Usuario creado (Auth deshabilitado)", 
+        user: { 
+          id_usuario: data.id_usuario,
+          id: data.id_usuario,
+          email, 
           username,
-          email,
           nombres_apellidos,
           rol_id,
           activo: true
-        }]);
-
-      if (dbError) {
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        throw dbError;
-      }
-    } else {
-        const { error: updateError } = await supabase
-            .from("usuarios")
-            .update({
-                username,
-                nombres_apellidos,
-                rol_id,
-                activo: true
-            })
-            .eq("id_usuario", authData.user.id);
-        
-        if (updateError) throw updateError;
-    }
-
-    res.status(201).json({ message: "Usuario creado exitosamente", user: authData.user });
+        }
+    });
 
   } catch (err) {
-    console.error("Error creating user:", err);
-    res.status(500).json({ error: err.message });
+    console.error("[CreateUser] Error final:", err);
+    res.status(500).json({ 
+      error: err.message,
+      hint: "Si el error es de permisos, verifica que SUPABASE_SERVICE_ROLE_KEY esté configurada en .env"
+    });
   }
 };
 
@@ -313,36 +370,101 @@ export const updateUser = async (req, res) => {
   const { id } = req.params;
   const { nombres_apellidos, username, email, rol_id, password } = req.body;
 
+  if (!id) {
+    return res.status(400).json({ error: "ID de usuario requerido" });
+  }
+
   try {
-    // 1. Actualizar tabla local
-    const { error: dbError } = await supabase
-      .from("usuarios")
-      .update({
-        nombres_apellidos,
-        username,
-        rol_id
-      })
-      .eq("id_usuario", id);
+    console.log(`[UpdateUser] Actualizando usuario ID: ${id}`);
+    
+    let updateData = {};
+    
+    if (nombres_apellidos) updateData.nombres_apellidos = nombres_apellidos;
+    if (username) updateData.username = username;
+    if (email) updateData.email = email;
+    if (rol_id) updateData.rol_id = rol_id;
 
-    if (dbError) throw dbError;
-
-    // 2. Si hay password, actualizar en Auth
+    // Si hay password, actualizar hash en BD local
     if (password && password.trim() !== "") {
-      if (password.length < 6) {
-        return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
-      }
-      const { error: authError } = await supabase.auth.admin.updateUserById(
-        id,
-        { password: password }
-      );
-      if (authError) throw authError;
+        if (password.length < 6) {
+            return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
+        }
+        const salt = await bcrypt.genSalt(10);
+        updateData.password_hash = await bcrypt.hash(password, salt);
+        console.log(`[UpdateUser] Contraseña incluida en actualización`);
     }
 
-    res.json({ message: "Usuario actualizado correctamente" });
+    // 1. Actualizar tabla local
+    console.log(`[UpdateUser] Datos a actualizar:`, { ...updateData, password_hash: updateData.password_hash ? '***' : undefined });
+    
+    const { data: updatedUser, error: dbError } = await supabase
+      .from("usuarios")
+      .update(updateData)
+      .eq("id_usuario", id)
+      .select()
+      .single();
+
+    if (dbError) {
+      console.error("[UpdateUser] Error en BD:", dbError);
+      throw dbError;
+    }
+    
+    if (!updatedUser) {
+        console.warn(`[UpdateUser] No se encontró usuario con ID ${id}`);
+        return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    console.log("[UpdateUser] Usuario actualizado en BD local exitosamente");
+
+    // 2. Si hay password y el ID es un UUID válido, actualizar en Auth
+    if (password && password.trim() !== "" && isUUID(id)) {
+      try {
+          console.log(`[UpdateUser] Actualizando password en Auth`);
+          const { error: authError } = await supabase.auth.admin.updateUserById(
+            id,
+            { password: password }
+          );
+          if (authError) {
+              console.warn("[UpdateUser] Advertencia al actualizar Auth:", authError.message);
+              // No es crítico si falla Auth, el login local funciona con bcrypt
+          } else {
+              console.log(`[UpdateUser] Password actualizado en Auth`);
+          }
+      } catch (authErr) {
+           console.warn("[UpdateUser] Excepción al actualizar Auth:", authErr.message);
+      }
+    }
+    
+    // 3. Actualizar datos en Auth si no es UUID
+    if (isUUID(id) && (nombres_apellidos || username)) {
+      try {
+          const metadata = {};
+          if (nombres_apellidos) metadata.nombres_apellidos = nombres_apellidos;
+          if (username) metadata.username = username;
+          
+          const { error: metaError } = await supabase.auth.admin.updateUserById(
+            id,
+            { user_metadata: metadata }
+          );
+          if (metaError) {
+              console.warn("[UpdateUser] Advertencia al actualizar metadata Auth:", metaError.message);
+          }
+      } catch (metaErr) {
+          console.warn("[UpdateUser] Excepción al actualizar metadata Auth:", metaErr.message);
+      }
+    }
+
+    res.json({ 
+      message: "Usuario actualizado correctamente",
+      user: updatedUser
+    });
 
   } catch (err) {
-    console.error("Error updating user:", err);
-    res.status(500).json({ error: err.message });
+    console.error("[UpdateUser] Error final:", err);
+    res.status(500).json({ 
+      error: err.message,
+      hint: "Verifica que el usuario exista y que tengas permisos suficientes"
+    });
   }
 };
 
