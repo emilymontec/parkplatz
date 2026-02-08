@@ -62,18 +62,12 @@ const initializeSystem = async () => {
         // console.warn("WARNING: No active tariffs.");
     }
 
-    // 4. Espacios Check
-    const { count: espaciosCount } = await supabase.from("espacios").select("*", { count: "exact", head: true });
-    if (espaciosCount === 0) {
-        // console.log("Creating default spaces...");
-        const spaces = [];
-        // 30 Autos (Tipo 1)
-        for (let i = 1; i <= 30; i++) spaces.push({ codigo: `A-${i}`, espacio_id: 1, disponible: true });
-        // 15 Motos (Tipo 3)
-        for (let i = 1; i <= 15; i++) spaces.push({ codigo: `M-${i}`, espacio_id: 3, disponible: true });
-        
-        await supabase.from("espacios").insert(spaces);
-    }
+    // 4. Espacios Check - Se crean manualmente con script/seed-espacios.js
+    // Los espacios pre-creados se gestionan a través de:
+    // - script seed-espacios.js: Crear espacios iniciales
+    // - script clean-espacios.js: Limpiar espacios
+    // - endpoint GET /api/admin/espacios: Ver estado
+    // - endpoint POST /api/admin/espacios/reset: Resetear a disponibles
 
     // 5. Admin Check
     const { data: admins } = await supabase.from("usuarios").select("id_usuario").eq("rol_id", 1).limit(1);

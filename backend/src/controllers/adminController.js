@@ -547,3 +547,89 @@ export const getRegistrosDebug = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+/**
+ * GET Espacios - Listar todos los espacios con su estado (Disponible/Ocupado)
+ * Ruta protegida: Solo ADMINISTRADOR
+ */
+export const getEspacios = async (req, res) => {
+  try {
+    const { data: espacios, error } = await supabase
+      .from("espacios")
+      .select("id_espacio, codigo, espacio_id, disponible")
+      .order("espacio_id", { ascending: true })
+      .order("id_espacio", { ascending: true });
+
+    if (error) throw error;
+
+    // Agrupar por tipo de vehículo usando espacio_id (1 para autos, 3 para motos)
+    const autos = espacios.filter(e => e.espacio_id === 1);
+    const motos = espacios.filter(e => e.espacio_id === 3);
+
+    const autosDisponibles = autos.filter(e => e.disponible).length;
+    const motosDisponibles = motos.filter(e => e.disponible).length;
+
+    res.json({
+      resumen: {
+        autos: {
+          total: autos.length,
+          disponibles: autosDisponibles,
+          ocupados: autos.length - autosDisponibles
+        },
+        motos: {
+          total: motos.length,
+          disponibles: motosDisponibles,
+          ocupados: motos.length - motosDisponibles
+        },
+        total: {
+          total: espacios.length,
+          disponibles: autosDisponibles + motosDisponibles,
+          ocupados: (autos.length + motos.length) - (autosDisponibles + motosDisponibles)
+        }
+      },
+      espacios: {
+        autos: autos
+          .sort((a, b) => a.id_espacio - b.id_espacio)
+          .map(e => ({
+            ...e,
+            estado: e.disponible ? "DISPONIBLE" : "OCUPADO"
+          })),
+        motos: motos
+          .sort((a, b) => a.id_espacio - b.id_espacio)
+          .map(e => ({
+            ...e,
+            estado: e.disponible ? "DISPONIBLE" : "OCUPADO"
+          }))
+      }
+    });
+
+  } catch (err) {
+    console.error("Error getting espacios:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * Reset Espacios - Poner todos los espacios como DISPONIBLES
+ * Ruta protegida: Solo ADMINISTRADOR
+ * ADVERTENCIA: Uso solo para mantenimiento/limpieza
+ */
+export const resetEspacios = async (req, res) => {
+  try {
+    const { data: updated, error } = await supabase
+      .from("espacios")
+      .update({ disponible: true })
+      .select("id_espacio, codigo, disponible");
+
+    if (error) throw error;
+
+    res.json({
+      message: `${updated.length} espacios reseteados a DISPONIBLE`,
+      total: updated.length
+    });
+
+  } catch (err) {
+    console.error("Error resetting espacios:", err);
+    res.status(500).json({ error: err.message });
+  }
+};

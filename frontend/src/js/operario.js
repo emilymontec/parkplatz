@@ -155,12 +155,12 @@ export default function initOperator() {
                 // Confirmación visual detallada
                 const reg = data.data; // El backend devuelve { message, data: { ... } }
                 const horaEntrada = new Date(reg.entrada).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-                const codigoEspacio = reg.espacios?.codigo || 'Sin Asignar';
+                const codigoEspacio = reg.espacios?.codigo || 'Sin asignar';
                 const tipoVehiculo = reg.tipos_vehiculo?.nombre || 'Vehículo';
 
                 await showAlert({
-                    title: 'Entrada Exitosa',
-                    message: `🚗 Placa: ${reg.placa}\n📍 Espacio: ${codigoEspacio}\n🕒 Hora: ${horaEntrada}\n🚙 Tipo: ${tipoVehiculo}`,
+                    title: 'Entrada exitosa',
+                    message: `Placa: ${reg.placa}\nEspacio: ${codigoEspacio}\nHora: ${horaEntrada}\nTipo: ${tipoVehiculo}`,
                     type: 'success',
                     btnText: 'Entendido'
                 });
