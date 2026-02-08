@@ -34,24 +34,29 @@ app.use("/api/registros", registroRoutes);
 // Rutas de administración (protegidas: ADMINISTRADOR)
 app.use("/api/admin", adminRoutes);
 
-// ========== MANEJO DE ERRORES ==========
+// ========== SPA FALLBACK ==========
 
-// Ruta 404
+// Middleware para servir SPA en rutas no encontradas
 app.use((req, res) => {
-  res.status(404).json({
-    error: "Ruta no encontrada",
-    path: req.path,
-    code: "NOT_FOUND"
-  });
-});
-
-// Error global middleware
-app.use((err, req, res, next) => {
-  console.error("Error no manejado:", err);
-  res.status(500).json({
-    error: "Error interno del servidor",
-    code: "SERVER_ERROR",
-    message: process.env.NODE_ENV === "development" ? err.message : undefined
+  // Si es una ruta de API no encontrada
+  if (req.path.startsWith("/api/")) {
+    return res.status(404).json({
+      error: "Ruta no encontrada",
+      path: req.path,
+      code: "NOT_FOUND"
+    });
+  }
+  
+  // Servir index.html para rutas del frontend (SPA routing)
+  const indexPath = path.join(__dirname, "../../frontend/index.html");
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      console.error("Error sirviendo index.html:", err);
+      res.status(500).json({
+        error: "Error interno del servidor",
+        code: "SERVER_ERROR"
+      });
+    }
   });
 });
 

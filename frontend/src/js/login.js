@@ -1,3 +1,5 @@
+import { navigateTo } from './routes.js';
+
 export default function initLogin() {
     const form = document.getElementById('loginForm');
     const errorMsg = document.getElementById('error');
@@ -40,9 +42,9 @@ export default function initLogin() {
             const userRole = (user.rol || '').toUpperCase();
             
             if (userRole === 'ADMINISTRADOR') {
-                location.hash = '/admin';
+                navigateTo('/admin');
             } else if (userRole === 'OPERARIO') {
-                location.hash = '/operator';
+                navigateTo('/operator');
             } else {
                 throw new Error('Rol de usuario desconocido: ' + userRole);
             }
