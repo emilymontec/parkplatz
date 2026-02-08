@@ -222,6 +222,13 @@ function setupModal() {
         });
     }
 
+    // Cancel Button
+    if (btnCancel) {
+        btnCancel.addEventListener('click', () => {
+            modal.classList.remove('active');
+        });
+    }
+
     // Close on outside click
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
