@@ -4,13 +4,17 @@ import {
   registerEntry, 
   registerExit 
 } from "../controllers/registroController.js";
+import { getTiposVehiculo } from "../controllers/tarifaController.js";
 import { authenticate, authorize } from "../middlewares/authMiddleware.js";
 
 const router = Router();
 
-// Todas las rutas de registros requieren autenticación y rol OPERARIO
+// Rutas accesibles para OPERARIO y ADMINISTRADOR
 router.use(authenticate);
-router.use(authorize("OPERARIO"));
+router.use(authorize(["OPERARIO", "ADMINISTRADOR"]));
+
+// Obtener tipos de vehículo (Necesario para el select de entrada)
+router.get("/tipos-vehiculo", getTiposVehiculo);
 
 // Obtener vehículos activos
 router.get("/activos", getActiveVehicles);

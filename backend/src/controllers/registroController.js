@@ -107,9 +107,44 @@ export const registerEntry = async (req, res) => {
       usuario_entrada: req.user.id
     };
 
-    // Si se proporciona espacio, agregarlo (es opcional en esta versión)
+    // Manejo inteligente de Espacio ID (Auto-asignación)
     if (espacio_id) {
       registroData.espacio_id = espacio_id;
+    } else {
+      // 1. Buscar un espacio existente para este tipo de vehículo
+      // Nota: En tabla 'espacios', la columna 'espacio_id' es la FK a 'tipos_vehiculo'
+      const { data: espacioExistente, error: errorBusqueda } = await supabase
+        .from('espacios')
+        .select('id_espacio')
+        .eq('espacio_id', tipo_vehiculo_id) // 'espacio_id' en tabla espacios es el tipo de vehículo
+        .limit(1)
+        .maybeSingle();
+
+      if (espacioExistente) {
+        registroData.espacio_id = espacioExistente.id_espacio;
+      } else {
+        // 2. Si no existe, crear uno automáticamente (Auto-provisioning)
+        // Esto soluciona el problema de tabla vacía sin necesidad de seeds manuales
+        const codigoGenerico = `GEN-${tipo_vehiculo_id}-01`;
+        
+        const { data: nuevoEspacio, error: errorCreacion } = await supabase
+          .from('espacios')
+          .insert([{
+            codigo: codigoGenerico,
+            espacio_id: tipo_vehiculo_id, // Tipo de vehículo
+            disponible: true
+          }])
+          .select('id_espacio')
+          .single();
+
+        if (errorCreacion) {
+          // Si falla (ej. código duplicado), intentar buscar de nuevo por si se creó en otra request
+          console.error("Error creando espacio automático:", errorCreacion);
+           throw new Error(`Error de configuración: No hay espacios definidos para el tipo ${tipo_vehiculo_id}`);
+        }
+
+        registroData.espacio_id = nuevoEspacio.id_espacio;
+      }
     }
 
     // Insertar registro de entrada
