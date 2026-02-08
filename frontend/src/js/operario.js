@@ -113,7 +113,7 @@ async function loadVehicles() {
             const data = await res.json();
             throw new Error(data.error || 'Error al cargar vehículos');
         }
-        
+
         const vehicles = await res.json();
         renderVehicles(vehicles);
         updateStats(vehicles.length);
@@ -135,20 +135,20 @@ function renderVehicles(vehicles) {
 
     tbody.innerHTML = vehicles.map(v => {
         const horaEntrada = new Date(v.entrada).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-        
+
         const tipoNombre = v.tipos_vehiculo?.nombre || 'Desconocido';
-        
+
         return `
         <tr>
-            <td><strong style="color: #1a1a1a;">${v.placa}</strong></td>
-                <td>${tipoNombre}</td>
+            <td><span class="plate-badge">${v.placa}</span></td>
+            <td>${tipoNombre}</td>
             <td>${horaEntrada}</td>
-            <td><span class="badge badge-success">EN CURSO</span></td>
-            <td>
+            <td><span class="badge badge-success">En Patio</span></td>
+            <td style="text-align: right;">
                 <button class="btn btn-logout" 
-                    style="padding: 5px 10px; font-size: 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                    title="Registrar Salida"
                     onclick="window.procesarSalida('${v.placa}')">
-                    Salida
+                    <i class="fa-solid fa-right-from-bracket"></i> Salida
                 </button>
             </td>
         </tr>
@@ -177,7 +177,7 @@ window.procesarSalida = async (placa) => {
 
         const total = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(data.costo_total);
         alert(`Salida exitosa.\n\nTiempo: ${data.duracion_minutos} min\nCosto: ${total}`);
-        
+
         loadVehicles();
 
     } catch (err) {
@@ -198,7 +198,7 @@ async function handleLogout() {
 
         // Limpiar sesión
         clearAuthSession();
-        
+
         // Redirigir a login
         navigateTo('/login');
 

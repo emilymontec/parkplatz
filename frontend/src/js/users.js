@@ -52,9 +52,9 @@ const loadRoles = async () => {
 
         const roles = await res.json();
         const rolSelect = document.getElementById('rol_id');
-        
+
         if (rolSelect) {
-            rolSelect.innerHTML = roles.map(rol => 
+            rolSelect.innerHTML = roles.map(rol =>
                 `<option value="${rol.id_rol}">${rol.nombre}</option>`
             ).join('');
         }
@@ -120,12 +120,16 @@ const renderTable = (users) => {
                 </span>
             </td>
             <td>
-                <button onclick="window.editUser('${user.id_usuario}')" title="Editar" style="background: none; border: none; cursor: pointer; font-size: 16px; margin-right: 10px;">
-                    ✏️
-                </button>
-                <button onclick="window.toggleUser('${user.id_usuario}', ${user.activo})" title="${user.activo ? 'Desactivar' : 'Activar'}" style="background: none; border: none; cursor: pointer; font-size: 16px;">
-                    ${user.activo ? '🚫' : '✅'}
-                </button>
+                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                    <button class="btn-action" onclick="window.editUser('${user.id_usuario}')" title="Editar">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                    <button class="btn-action ${user.activo ? 'btn-toggle-off' : 'btn-toggle-on'}" 
+                            onclick="window.toggleUser('${user.id_usuario}', ${user.activo})" 
+                            title="${user.activo ? 'Desactivar' : 'Activar'}">
+                        <i class="fa-solid ${user.activo ? 'fa-user-slash' : 'fa-user-check'}"></i>
+                    </button>
+                </div>
             </td>
         </tr>
     `).join('');
