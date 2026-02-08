@@ -9,6 +9,8 @@
     <link rel="icon" type="image/png" href="./src/static/icons/logo.png">
     <!-- Base styles -->
     <link rel="stylesheet" href="./src/css/global.css">
+    <!-- WhatsApp Float Widget -->
+    <link rel="stylesheet" href="./src/css/whatsapp-float.css">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- QRCode.js -->
@@ -62,6 +64,18 @@
 
     <!-- Main Entry Point -->
     <script type="module" src="/src/js/routes.js"></script>
+    
+    <!-- WhatsApp Float Widget -->
+    <script src="./src/js/whatsapp-float.js"></script>
+    <script>
+        // Inicializar botón WhatsApp flotante al cargar la página
+        document.addEventListener('DOMContentLoaded', () => {
+            new WhatsAppFloat({
+                phoneNumber: '+573246372082',
+                message: '¡Hola! Tengo una consulta sobre el parqueadero Parkplatz.'
+            });
+        });
+    </script>
 </body>
 
 </html>
