@@ -1,10 +1,11 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import bcrypt from "bcrypt";
-import { supabase } from "./config/db.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import authRoutes from "./routes/authRoutes.js";
+import registroRoutes from "./routes/registroRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,56 +18,45 @@ app.use(express.json());
 // Servir archivos estáticos del frontend
 app.use(express.static(path.join(__dirname, "../../frontend")));
 
+// Servir index.html para SPA
 app.get("/", (_, res) => {
   res.sendFile(path.join(__dirname, "../../frontend/index.html"));
 });
 
-app.post("/login", async (req, res) => {
-  const { username, password } = req.body;
+// ========== RUTAS DE API ==========
 
-  if (!username || !password) {
-    return res.status(400).json({ error: "Nombre de usuario y contraseña son requeridos" });
-  }
+// Rutas de autenticación (login pública, otras protegidas)
+app.use("/api/auth", authRoutes);
 
-  try {
-    const { data: users, error } = await supabase
-      .from("usuarios")
-      .select("*")
-      .eq("username", username)
-      .limit(1);
+// Rutas de registros de vehículos (protegidas: OPERARIO)
+app.use("/api/registros", registroRoutes);
 
-    if (error) {
-      console.error("Login error:", error);
-      return res.status(500).json({ error: "Error en el servidor" });
-    }
+// Rutas de administración (protegidas: ADMINISTRADOR)
+app.use("/api/admin", adminRoutes);
 
-    if (!users || users.length === 0) {
-      return res.status(401).json({ error: "Credenciales inválidas" });
-    }
+// ========== MANEJO DE ERRORES ==========
 
-    const user = users[0];
-    
-    // Check if user is active
-    if (!user.activo) {
-        return res.status(403).json({ error: "Usuario deshabilitado" });
-    }
-
-    const match = await bcrypt.compare(password, user.password_hash);
-
-    if (!match) {
-      return res.status(401).json({ error: "Credenciales inválidas" });
-    }
-
-    // Return user info excluding sensitive data
-    const { password_hash, ...userInfo } = user;
-    res.json({ message: "Acceso permitido", user: userInfo });
-
-  } catch (err) {
-    console.error("Unexpected error:", err);
-    res.status(500).json({ error: "Error en el servidor" });
-  }
+// Ruta 404
+app.use((req, res) => {
+  res.status(404).json({
+    error: "Ruta no encontrada",
+    path: req.path,
+    code: "NOT_FOUND"
+  });
 });
 
+// Error global middleware
+app.use((err, req, res, next) => {
+  console.error("Error no manejado:", err);
+  res.status(500).json({
+    error: "Error interno del servidor",
+    code: "SERVER_ERROR",
+    message: process.env.NODE_ENV === "development" ? err.message : undefined
+  });
+});
+
+// ========== INICIAR SERVIDOR ==========
+
 app.listen(4000, () => {
-  console.log("Server → http://localhost:4000");
+  console.log(`Server running at http://localhost:4000`);
 });
