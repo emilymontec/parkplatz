@@ -23,6 +23,7 @@ export default function initOperator() {
     }
 
     // 4. Cargar datos reales
+    loadVehicleTypes(); // Cargar tipos dinámicos
     loadVehicles();
 
     // 5. Lógica de Modal
@@ -86,6 +87,31 @@ export default function initOperator() {
                 btn.innerText = originalText;
             }
         };
+    }
+}
+
+async function loadVehicleTypes() {
+    const select = document.querySelector('select[name="tipo"]');
+    if (!select) return;
+
+    try {
+        const res = await fetch('/api/registros/tipos-vehiculo', {
+            method: 'GET',
+            headers: getAuthHeaders()
+        });
+
+        if (!res.ok) throw new Error('Error al cargar tipos');
+
+        const tipos = await res.json();
+        
+        select.innerHTML = '<option value="">Seleccione Categoría...</option>';
+        tipos.forEach(tipo => {
+            select.innerHTML += `<option value="${tipo.id_vehiculo}">${tipo.nombre}</option>`;
+        });
+
+    } catch (err) {
+        console.error("Error loading vehicle types:", err);
+        // Fallback or leave default options if any
     }
 }
 
