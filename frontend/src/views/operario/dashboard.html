@@ -1,20 +1,18 @@
 <nav class="navbar">
-    <a href="#/operario" class="logo" style="display: flex; align-items: center; gap: 10px;">
-        <img src="/src/static/icons/logo.png" alt="Logo" style="width: 24px;">
-        <span>Park</span>platz
+    <a href="/operario" class="logo">
+        <img src="/src/static/icons/logo.png" alt="Logo">
+        <span>Parkplatz</span>
     </a>
     <div class="nav-links">
-        <a href="#/operario" class="active">Operación</a>
-        <a href="#" style="pointer-events: none; opacity: 0.5;">Tarifas</a>
-        <a href="#" style="pointer-events: none; opacity: 0.5;">Reportes</a>
+        <a href="/operario" class="active">Operación</a>
+        <a href="javascript:void(0)" style="pointer-events: none; opacity: 0.5;">Tarifas</a>
+        <a href="javascript:void(0)" style="pointer-events: none; opacity: 0.5;">Reportes</a>
     </div>
     <div class="user-profile">
-        <div style="display: flex; flex-direction: column; align-items: flex-end;">
-            <span id="userName" style="font-size: 0.9rem; font-weight: 700;">Cargando...</span>
-            <span
-                style="font-size: 0.7rem; color: var(--primary); font-weight: 800; text-transform: uppercase;">Operario</span>
+        <div class="user-info">
+            <span id="userName" class="user-name">Cargando...</span>
+            <span class="user-role">Operario</span>
         </div>
-        <div id="userInitials" class="avatar">U</div>
         <button id="logoutBtn" class="btn btn-logout" style="padding: 10px; min-width: 42px;">
             <i class="fa-solid fa-right-from-bracket"></i>
         </button>
@@ -92,8 +90,8 @@
 
 <!-- Modal: Registro de Entrada -->
 <div id="entryModal" class="modal-overlay">
-    <div class="modal-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem;">
+    <div class="modal-content">
+        <div class="modal-header">
             <h2 style="font-size: 1.5rem; font-weight: 800;"><i class="fa-solid fa-circle-plus"
                     style="color: var(--primary); margin-right: 10px;"></i> Nuevo Ingreso</h2>
             <button id="btnCancelEntry" class="modal-close"><i class="fa-solid fa-xmark"></i></button>
@@ -102,11 +100,10 @@
         <form id="entryForm">
             <div class="input-group">
                 <label>Placa del Vehículo</label>
-                <div style="position: relative;">
-                    <i class="fa-solid fa-id-card"
-                        style="position: absolute; left: 16px; top: 16px; color: var(--text-dim);"></i>
-                    <input type="text" name="placa" class="input-field"
-                        style="padding-left: 48px; text-transform: uppercase; font-weight: 800; font-family: 'Outfit'; letter-spacing: 1px;"
+                <div class="input-icon-container">
+                    <i class="fa-solid fa-id-card input-icon"></i>
+                    <input type="text" name="placa" class="input-field input-with-icon"
+                        style="text-transform: uppercase; font-weight: 800; font-family: 'Outfit'; letter-spacing: 1px;"
                         placeholder="ABC-123" required>
                 </div>
             </div>
@@ -120,10 +117,10 @@
                 </select>
             </div>
 
-            <div class="btn-group">
-                <button type="submit" class="btn btn-primary">Completar Registro</button>
+            <div class="btn-group" style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
                 <button type="button" onclick="document.getElementById('entryModal').style.display = 'none'"
                     class="btn btn-cancel">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Completar Registro</button>
             </div>
         </form>
     </div>

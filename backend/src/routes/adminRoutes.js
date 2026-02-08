@@ -8,6 +8,13 @@ import {
   updateUser,
   toggleUserStatus
 } from "../controllers/adminController.js";
+import {
+  getTarifas,
+  createTarifa,
+  updateTarifa,
+  toggleTarifaStatus,
+  getTiposVehiculo
+} from "../controllers/tarifaController.js";
 import { authenticate, authorize } from "../middlewares/authMiddleware.js";
 
 const router = Router();
@@ -28,5 +35,12 @@ router.get("/usuarios", getUsers);
 router.post("/usuarios", createUser);
 router.put("/usuarios/:id", updateUser);
 router.patch("/usuarios/:id/toggle", toggleUserStatus);
+
+// Gestión de Tarifas
+router.get("/tarifas", getTarifas);
+router.post("/tarifas", createTarifa);
+router.put("/tarifas/:id", updateTarifa);
+router.patch("/tarifas/:id/toggle", toggleTarifaStatus);
+router.get("/tipos-vehiculo", getTiposVehiculo);
 
 export default router;

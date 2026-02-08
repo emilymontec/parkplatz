@@ -1,46 +1,104 @@
 /**
- * routes.js - Router Central de la Aplicación
- * Gestiona la carga dinámica de vistas y controladores.
+ * routes.js - Router Central de la Aplicación (History API)
+ * Gestiona la carga dinámica de vistas y controladores usando rutas limpias.
  * Incluye autenticación JWT y validación de roles.
  */
+
+/**
+ * Mostrar cuadro de confirmación personalizado
+ */
+export const showConfirm = ({ title, message, icon, okText, cancelText, type = 'warning' }) => {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirmModal');
+        const titleEl = document.getElementById('confirmTitle');
+        const messageEl = document.getElementById('confirmMessage');
+        const iconEl = document.getElementById('confirmIcon');
+        const okBtn = document.getElementById('confirmOkBtn');
+        const cancelBtn = document.getElementById('confirmCancelBtn');
+
+        if (!modal) return resolve(false);
+
+        // Configurar contenido
+        titleEl.textContent = title || '¿Estás seguro?';
+        messageEl.textContent = message || 'Esta acción requiere confirmación.';
+        okBtn.textContent = okText || 'Confirmar';
+        cancelBtn.textContent = cancelText || 'Cancelar';
+
+        // Configurar icono y color según tipo
+        let iconHtml = '<i class="fa-solid fa-circle-question"></i>';
+        let color = 'var(--warning)';
+
+        if (type === 'danger') {
+            iconHtml = '<i class="fa-solid fa-circle-exclamation"></i>';
+            color = 'var(--danger)';
+        } else if (type === 'success') {
+            iconHtml = '<i class="fa-solid fa-circle-check"></i>';
+            color = 'var(--success)';
+        }
+
+        iconEl.innerHTML = icon || iconHtml;
+        iconEl.style.color = color;
+
+        // Mostrar modal
+        modal.classList.add('active');
+
+        const cleanup = (result) => {
+            modal.classList.remove('active');
+            okBtn.onclick = null;
+            cancelBtn.onclick = null;
+            resolve(result);
+        };
+
+        okBtn.onclick = () => cleanup(true);
+        cancelBtn.onclick = () => cleanup(false);
+    });
+};
 
 // Configuración de rutas
 const routes = {
     '/': {
-        view: 'src/views/login.html',
-        styles: ['src/css/login.css'],
+        view: '/src/views/login.html',
+        styles: ['/src/css/login.css'],
         title: 'Login - Parkplatz',
         controller: './login.js',
         initFn: 'initLogin',
         public: true // Ruta pública (sin token)
     },
     '/login': {
-        view: 'src/views/login.html',
-        styles: ['src/css/login.css'],
+        view: '/src/views/login.html',
+        styles: ['/src/css/login.css'],
         title: 'Login - Parkplatz',
         controller: './login.js',
         initFn: 'initLogin',
         public: true
     },
     '/admin': {
-        view: 'src/views/admin/dashboard.html',
-        styles: ['src/css/global.css', 'src/css/admin.css'],
+        view: '/src/views/admin/dashboard.html',
+        styles: ['/src/css/global.css', '/src/css/admin.css'],
         title: 'Administración - Parkplatz',
         role: 'ADMINISTRADOR',
         controller: './admin.js',
         initFn: 'initAdmin'
     },
     '/admin/users': {
-        view: 'src/views/admin/users.html',
-        styles: ['src/css/global.css', 'src/css/admin.css'],
+        view: '/src/views/admin/users.html',
+        styles: ['/src/css/global.css', '/src/css/admin.css'],
         title: 'Gestión Usuarios - Parkplatz',
         role: 'ADMINISTRADOR',
         controller: './users.js',
         initFn: 'initUsers'
     },
+    '/admin/tarifas': {
+        view: '/src/views/admin/tarifas.html',
+        styles: ['/src/css/global.css', '/src/css/admin.css'],
+        title: 'Gestión Tarifas - Parkplatz',
+        role: 'ADMINISTRADOR',
+        controller: './tarifas.js',
+        initFn: 'initTarifas'
+    },
     '/operario': {
-        view: 'src/views/operario/dashboard.html',
-        styles: ['src/css/global.css', 'src/css/operario.css'],
+        view: '/src/views/operario/dashboard.html',
+        styles: ['/src/css/global.css', '/src/css/operario.css'],
         title: 'Operación - Parkplatz',
         role: 'OPERARIO',
         controller: './operario.js',
@@ -49,10 +107,11 @@ const routes = {
 };
 
 /**
- * Función para navegar a una ruta mediante hash
+ * Función para navegar a una ruta (History API)
  */
 export const navigateTo = (path) => {
-    window.location.hash = path;
+    window.history.pushState(null, null, path);
+    router();
 };
 
 /**
@@ -121,10 +180,10 @@ export const clearAuthSession = () => {
  * Motor del Router
  */
 const router = async () => {
-    // 1. Obtener ruta actual del hash o por defecto '/'
-    let path = window.location.hash.slice(1) || '/';
+    // 1. Obtener ruta actual (Pathname)
+    let path = window.location.pathname;
 
-    // Normalizar ruta (limpiar barras extras)
+    // Normalizar ruta (limpiar barras extras al final, excepto si es raíz)
     if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1);
 
     // 2. Gestión de Sesión - Verificar token con backend
@@ -138,7 +197,7 @@ const router = async () => {
         if (!user) {
             // Token expirado o inválido, limpiar sesión
             console.warn('Token inválido o expirado');
-            if (path !== '/') {
+            if (path !== '/' && path !== '/login') {
                 navigateTo('/');
                 return;
             }
@@ -156,7 +215,7 @@ const router = async () => {
     }
 
     // Si el usuario está autenticado y trata de acceder a login
-    if (user && path === '/') {
+    if (user && (path === '/' || path === '/login')) {
         if (user.rol === 'ADMINISTRADOR') navigateTo('/admin');
         else if (user.rol === 'OPERARIO') navigateTo('/operario');
         return;
@@ -165,6 +224,7 @@ const router = async () => {
     // 4. Buscar configuración de la ruta
     if (!config) {
         console.warn(`Ruta no definida: ${path}`);
+        // Opcional: Mostrar página 404 o redirigir
         navigateTo('/');
         return;
     }
@@ -291,8 +351,24 @@ function setupInactivityListeners() {
     resetTimer();
 }
 
-// Eventos de Navegación
-window.onhashchange = router;
+// Interceptor de clics para navegación SPA
+document.addEventListener('click', e => {
+    // Buscar si el clic fue en un enlace (o hijo de un enlace)
+    const link = e.target.closest('a');
+
+    if (link) {
+        const href = link.getAttribute('href');
+
+        // Si es un enlace interno (comienza con /) y no es externo/anchor
+        if (href && href.startsWith('/') && !href.startsWith('//') && !link.target) {
+            e.preventDefault();
+            navigateTo(href);
+        }
+    }
+});
+
+// Eventos de Navegación (History API)
+window.addEventListener('popstate', router);
 
 // Inicio de la Aplicación
 const initApp = () => {

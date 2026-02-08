@@ -1,4 +1,4 @@
-import { getAuthHeaders, navigateTo, clearAuthSession } from './routes.js';
+import { getAuthHeaders, navigateTo, clearAuthSession, showConfirm } from './routes.js';
 
 export default function initOperator() {
     console.log('Operator Dashboard Ready');
@@ -7,9 +7,7 @@ export default function initOperator() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     if (user.username) {
         const nameEl = document.getElementById('userName');
-        const initEl = document.getElementById('userInitials');
         if (nameEl) nameEl.textContent = user.nombres_apellidos || user.username;
-        if (initEl) initEl.textContent = (user.username || 'U').charAt(0).toUpperCase();
     }
 
     // 2. Referencias UI
@@ -157,7 +155,14 @@ function renderVehicles(vehicles) {
 
 // Función global para poder llamarla desde el HTML onclick
 window.procesarSalida = async (placa) => {
-    if (!confirm(`¿Confirmar salida del vehículo ${placa}?`)) return;
+    const confirmed = await showConfirm({
+        title: 'Confirmar Salida',
+        message: `¿Deseas registrar la salida del vehículo con placa ${placa}?`,
+        type: 'warning',
+        okText: 'Registrar Salida'
+    });
+
+    if (!confirmed) return;
 
     try {
         const res = await fetch('/api/registros/salida', {

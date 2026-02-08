@@ -1,125 +1,119 @@
 import { supabase } from "../config/db.js";
-import bcrypt from "bcrypt";
 
 /**
  * Obtener estadísticas del dashboard
- * Ruta protegida: Solo ADMINISTRADOR
  */
 export const getDashboardStats = async (req, res) => {
   try {
-    // Obtener registros de hoy
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const todayIso = today.toISOString();
-
-    // Ingresos del día - registros finalizados hoy
-    const { data: todayRegistros, error: regError } = await supabase
+    // 1. Ocupación actual
+    const { count: ocupacionActual, error: errorOcupacion } = await supabase
       .from("registros")
-      .select("valor_calculado")
-      .gte("entrada", todayIso)
-      .eq("estado", "FINALIZADO");
-
-    if (regError) throw regError;
-
-    const income = todayRegistros?.reduce((sum, reg) => sum + (parseFloat(reg.valor_calculado) || 0), 0) || 0;
-
-    // Vehículos activos (en curso)
-    const { data: activeVehicles, error: activeError } = await supabase
-      .from("registros")
-      .select("id_registro")
+      .select("*", { count: "exact", head: true })
       .eq("estado", "EN_CURSO");
 
-    if (activeError) throw activeError;
+    if (errorOcupacion) throw errorOcupacion;
 
-    const active = activeVehicles?.length || 0;
+    // 2. Ingresos de hoy
+    const today = new Date().toISOString().split("T")[0];
+    const { data: ingresosData, error: errorIngresos } = await supabase
+      .from("registros")
+      .select("valor_calculado")
+      .eq("estado", "FINALIZADO")
+      .gte("salida", `${today}T00:00:00`)
+      .lte("salida", `${today}T23:59:59`);
 
-    // Capacidad total (30 autos + 15 motos)
-    const totalCapacity = 45;
-    const occupancy = Math.round((active / totalCapacity) * 100);
+    if (errorIngresos) throw errorIngresos;
+    
+    const ingresosHoy = ingresosData.reduce((sum, reg) => sum + (reg.valor_calculado || 0), 0);
+
+    // 3. Vehículos hoy
+    const { count: vehiculosHoy, error: errorVehiculos } = await supabase
+      .from("registros")
+      .select("*", { count: "exact", head: true })
+      .gte("entrada", `${today}T00:00:00`)
+      .lte("entrada", `${today}T23:59:59`);
+
+    if (errorVehiculos) throw errorVehiculos;
+
+    // 4. Espacios disponibles (Total aproximado 45: 30 autos + 15 motos)
+    // Esto podría refinarse si hubiera una tabla de configuración de espacios
+    const espaciosDisponibles = 45 - (ocupacionActual || 0);
 
     res.json({
-      income,
-      occupancy,
-      active,
-      totalCapacity,
-      date: today.toISOString().split('T')[0]
+      ocupacionActual: ocupacionActual || 0,
+      espaciosDisponibles: espaciosDisponibles > 0 ? espaciosDisponibles : 0,
+      ingresosHoy,
+      vehiculosHoy: vehiculosHoy || 0
     });
 
   } catch (err) {
-    console.error("Error getting dashboard stats:", err);
-    res.status(500).json({ 
-      error: err.message,
-      code: "DB_ERROR"
-    });
+    console.error("Error getting stats:", err);
+    res.status(500).json({ error: err.message });
   }
 };
 
 /**
- * Obtener historial de registros paginado
- * Ruta protegida: Solo ADMINISTRADOR
+ * Obtener historial de registros reciente
  */
 export const getRegistrosHistory = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50;
-    const offset = (page - 1) * limit;
-
-    // Obtener total
-    const { count, error: countError } = await supabase
-      .from("registros")
-      .select("*", { count: "exact", head: true });
-
-    if (countError) throw countError;
-
-    // Obtener registros paginados con información relacionada
     const { data, error } = await supabase
       .from("registros")
       .select(`
         id_registro,
         placa,
-        vehiculo_id,
-        tipos_vehiculo(nombre),
         entrada,
         salida,
-        total_minutos,
-        valor_calculado,
         estado,
-        usuario_entrada,
-        usuario_salida
+        valor_calculado,
+        tipos_vehiculo(nombre)
       `)
       .order("entrada", { ascending: false })
-      .range(offset, offset + limit - 1);
+      .limit(10);
 
     if (error) throw error;
+    
+    // Mapear respuesta para mantener compatibilidad con frontend si usa nombres viejos
+    // O mejor, el frontend debería adaptarse. Por ahora mapearé para asegurar.
+    const mappedData = data.map(reg => ({
+        ...reg,
+        hora_entrada: reg.entrada,
+        hora_salida: reg.salida,
+        costo_total: reg.valor_calculado
+    }));
 
-    res.json({
-      data,
-      pagination: {
-        page,
-        limit,
-        total: count,
-        pages: Math.ceil(count / limit)
-      }
-    });
-
+    res.json(mappedData);
   } catch (err) {
-    console.error("Error getting registros history:", err);
-    res.status(500).json({ 
-      error: err.message,
-      code: "DB_ERROR"
-    });
+    console.error("Error getting history:", err);
+    res.status(500).json({ error: err.message });
   }
 };
 
 /**
- * Obtener listado de roles
- * Ruta protegida: Solo ADMINISTRADOR
+ * Obtener todos los roles
  */
 export const getRoles = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("roles")
+      .select("*")
+      .order("id_roles", { ascending: true });
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    console.error("Error getting roles:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * Obtener listado de tipos de vehículo
+ */
+export const getTiposVehiculo = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("tipos_vehiculo")
       .select("*")
       .order("nombre", { ascending: true });
 
@@ -127,7 +121,7 @@ export const getRoles = async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    console.error("Error getting roles:", err);
+    console.error("Error getting vehicle types:", err);
     res.status(500).json({
       error: err.message,
       code: "DB_ERROR"
@@ -136,260 +130,171 @@ export const getRoles = async (req, res) => {
 };
 
 /**
- * Obtener listado de usuarios (gestión)
- * Ruta protegida: Solo ADMINISTRADOR
+ * Obtener usuarios
  */
 export const getUsers = async (req, res) => {
   try {
+    // Importante: traer rol_id para el frontend edit modal
     const { data, error } = await supabase
       .from("usuarios")
       .select(`
         id_usuario,
         username,
         email,
-        rol_id,
-        roles(nombre),
         nombres_apellidos,
         activo,
-        fecha_creacion
+        rol_id,
+        roles (
+          nombre
+        )
       `)
       .order("fecha_creacion", { ascending: false });
 
     if (error) throw error;
 
-    // Transformar datos para mejor legibilidad
-    const usuarios = data.map(user => ({
-      id_usuario: user.id_usuario,
-      username: user.username,
-      email: user.email,
-      rol: user.roles?.nombre || "DESCONOCIDO",
-      rol_id: user.rol_id,
-      nombres_apellidos: user.nombres_apellidos,
-      activo: user.activo,
-      fecha_creacion: user.fecha_creacion
+    // Mapear para facilitar uso en frontend
+    const users = data.map(u => ({
+      ...u,
+      rol: u.roles?.nombre || 'Sin Rol'
     }));
 
-    res.json(usuarios);
-
+    res.json(users);
   } catch (err) {
     console.error("Error getting users:", err);
-    res.status(500).json({ 
-      error: err.message,
-      code: "DB_ERROR"
-    });
+    res.status(500).json({ error: err.message });
   }
 };
 
 /**
- * Crear nuevo usuario
- * Ruta protegida: Solo ADMINISTRADOR
+ * Crear usuario (Sincronizado con Supabase Auth)
  */
 export const createUser = async (req, res) => {
-  const { username, password, email, rol_id, nombres_apellidos } = req.body;
+  const { username, email, password, nombres_apellidos, rol_id } = req.body;
 
-  if (!username || !password || !email || !rol_id || !nombres_apellidos) {
-    return res.status(400).json({
-      error: "Todos los campos son requeridos",
-      code: "MISSING_FIELDS"
-    });
+  if (!email || !password || !username || !rol_id) {
+    return res.status(400).json({ error: "Faltan campos requeridos" });
   }
 
   try {
-    // Verificar si el usuario ya existe
-    const { data: existingUser, error: checkError } = await supabase
+    // 1. Crear usuario en Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { username, nombres_apellidos }
+    });
+
+    if (authError) throw authError;
+
+    // 2. Crear usuario en tabla local 'usuarios'
+    const { data: existingUser } = await supabase
       .from("usuarios")
       .select("id_usuario")
-      .or(`username.eq.${username},email.eq.${email}`)
+      .eq("id_usuario", authData.user.id)
       .single();
 
-    if (existingUser) {
-      return res.status(409).json({
-        error: "El usuario o email ya existe",
-        code: "USER_EXISTS"
-      });
+    if (!existingUser) {
+      const { error: dbError } = await supabase
+        .from("usuarios")
+        .insert([{
+          id_usuario: authData.user.id,
+          username,
+          email,
+          nombres_apellidos,
+          rol_id,
+          activo: true
+        }]);
+
+      if (dbError) {
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw dbError;
+      }
+    } else {
+        const { error: updateError } = await supabase
+            .from("usuarios")
+            .update({
+                username,
+                nombres_apellidos,
+                rol_id,
+                activo: true
+            })
+            .eq("id_usuario", authData.user.id);
+        
+        if (updateError) throw updateError;
     }
 
-    // Hash de contraseña
-    const saltRounds = 10;
-    const password_hash = await bcrypt.hash(password, saltRounds);
-
-    // Insertar usuario
-    const { data, error } = await supabase
-      .from("usuarios")
-      .insert([{
-        username,
-        password_hash,
-        email,
-        rol_id,
-        nombres_apellidos,
-        activo: true // Por defecto activo
-      }])
-      .select(`
-        id_usuario,
-        username,
-        email,
-        rol_id,
-        nombres_apellidos,
-        activo,
-        fecha_creacion
-      `)
-      .single();
-
-    if (error) throw error;
-
-    res.status(201).json({
-      message: "Usuario creado exitosamente",
-      user: data
-    });
+    res.status(201).json({ message: "Usuario creado exitosamente", user: authData.user });
 
   } catch (err) {
     console.error("Error creating user:", err);
-    res.status(500).json({
-      error: err.message,
-      code: "DB_ERROR"
-    });
+    res.status(500).json({ error: err.message });
   }
 };
 
 /**
- * Actualizar usuario (Asignar rol, editar datos)
- * Ruta protegida: Solo ADMINISTRADOR
+ * Actualizar usuario
  */
 export const updateUser = async (req, res) => {
   const { id } = req.params;
-  const { username, email, rol_id, nombres_apellidos, password } = req.body;
-
-  if (!id) {
-    return res.status(400).json({
-      error: "ID de usuario requerido",
-      code: "MISSING_ID"
-    });
-  }
+  const { nombres_apellidos, username, email, rol_id, password } = req.body;
 
   try {
-    // Validar que el rol existe si se está actualizando
-    if (rol_id) {
-      const { data: roleExists, error: roleError } = await supabase
-        .from("roles")
-        .select("id_rol")
-        .eq("id_rol", rol_id)
-        .single();
-
-      if (roleError || !roleExists) {
-        return res.status(400).json({
-          error: "El rol seleccionado no es válido",
-          code: "INVALID_ROLE"
-        });
-      }
-    }
-
-    const updates = {};
-    if (username) updates.username = username;
-    if (email) updates.email = email;
-    if (rol_id) updates.rol_id = rol_id;
-    if (nombres_apellidos) updates.nombres_apellidos = nombres_apellidos;
-
-    // Si se proporciona contraseña, hashearla
-    if (password) {
-      const saltRounds = 10;
-      updates.password_hash = await bcrypt.hash(password, saltRounds);
-    }
-
-    if (Object.keys(updates).length === 0) {
-      return res.status(400).json({
-        error: "No hay datos para actualizar",
-        code: "NO_DATA"
-      });
-    }
-
-    const { data, error } = await supabase
+    // 1. Actualizar tabla local
+    const { error: dbError } = await supabase
       .from("usuarios")
-      .update(updates)
-      .eq("id_usuario", id)
-      .select(`
-        id_usuario,
-        username,
-        email,
-        rol_id,
+      .update({
         nombres_apellidos,
-        activo
-      `)
-      .single();
+        username,
+        rol_id
+      })
+      .eq("id_usuario", id);
 
-    if (error) throw error;
+    if (dbError) throw dbError;
 
-    res.json({
-      message: "Usuario actualizado exitosamente",
-      user: data
-    });
+    // 2. Si hay password, actualizar en Auth
+    if (password && password.trim() !== "") {
+      const { error: authError } = await supabase.auth.admin.updateUserById(
+        id,
+        { password: password }
+      );
+      if (authError) throw authError;
+    }
+
+    res.json({ message: "Usuario actualizado correctamente" });
 
   } catch (err) {
     console.error("Error updating user:", err);
-    res.status(500).json({
-      error: err.message,
-      code: "DB_ERROR"
-    });
+    res.status(500).json({ error: err.message });
   }
 };
 
 /**
- * Desactivar/activar usuario
- * Ruta protegida: Solo ADMINISTRADOR
+ * Cambiar estado (Activar/Desactivar)
  */
 export const toggleUserStatus = async (req, res) => {
-  const { userId, activo } = req.body;
-  // Support both body param and URL param for consistency if needed, 
-  // but sticking to existing pattern for now.
-  // Note: Route uses /:id/toggle so usually we use req.params.id too,
-  // but the existing code used req.body.userId. 
-  // I will make it flexible to support req.params.id if userId is missing.
-  
-  const targetId = userId || req.params.id;
-
-  if (!targetId || typeof activo !== 'boolean') {
-    return res.status(400).json({ 
-      error: "userId (o param id) y activo son requeridos",
-      code: "MISSING_FIELDS"
-    });
-  }
+  const { id } = req.params;
+  const { activo } = req.body; // boolean
 
   try {
-    const { data, error } = await supabase
+    // 1. Actualizar BD local
+    const { error: dbError } = await supabase
       .from("usuarios")
       .update({ activo })
-      .eq("id_usuario", targetId)
-      .select(`
-        id_usuario,
-        username,
-        email,
-        rol_id,
-        roles(nombre),
-        nombres_apellidos,
-        activo
-      `)
-      .single();
+      .eq("id_usuario", id);
 
-    if (error) throw error;
+    if (dbError) throw dbError;
 
-    const userInfo = {
-      id_usuario: data.id_usuario,
-      username: data.username,
-      email: data.email,
-      rol: data.roles?.nombre,
-      nombres_apellidos: data.nombres_apellidos,
-      activo: data.activo
-    };
+    // 2. Bloquear/Desbloquear en Auth (ban)
+    if (activo === false) {
+       await supabase.auth.admin.updateUserById(id, { ban_duration: "876000h" }); // ~100 años
+    } else {
+       await supabase.auth.admin.updateUserById(id, { ban_duration: "0" }); // remove ban
+    }
 
-    res.json({
-      message: `Usuario ${activo ? 'activado' : 'desactivado'}`,
-      user: userInfo
-    });
+    res.json({ message: `Usuario ${activo ? 'activado' : 'desactivado'} correctamente` });
 
   } catch (err) {
     console.error("Error toggling user status:", err);
-    res.status(500).json({ 
-      error: err.message,
-      code: "DB_ERROR"
-    });
+    res.status(500).json({ error: err.message });
   }
 };
