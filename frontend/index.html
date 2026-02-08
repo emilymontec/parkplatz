@@ -42,6 +42,22 @@
 <body>
     <div id="app"></div>
 
+    <!-- Modal de Confirmación Global -->
+    <div id="confirmModal" class="modal-overlay" style="z-index: 3000;">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div id="confirmIcon" style="font-size: 3rem; color: var(--warning); margin-bottom: 1rem;">
+                <i class="fa-solid fa-circle-question"></i>
+            </div>
+            <h2 id="confirmTitle" style="margin-bottom: 0.5rem;">¿Estás seguro?</h2>
+            <p id="confirmMessage" style="color: var(--text-muted); margin-bottom: 2rem;">Esta acción no se puede
+                deshacer.</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <button id="confirmCancelBtn" class="btn btn-logout">Cancelar</button>
+                <button id="confirmOkBtn" class="btn btn-primary">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Entry Point -->
     <script type="module" src="/src/js/routes.js"></script>
 </body>

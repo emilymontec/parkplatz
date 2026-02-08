@@ -14,7 +14,6 @@
             <span
                 style="font-size: 0.7rem; color: var(--primary); font-weight: 800; text-transform: uppercase;">Administrador</span>
         </div>
-        <div id="userInitials" class="avatar">A</div>
         <button id="logoutBtn" class="btn btn-logout" style="padding: 10px; min-width: 42px;">
             <i class="fa-solid fa-right-from-bracket"></i>
         </button>
@@ -106,8 +105,7 @@
 
             <div style="display: grid; grid-template-columns: 1fr 150px; gap: 1rem; margin-top: 2rem;">
                 <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-                <button type="button" onclick="document.getElementById('userModal').classList.remove('active')"
-                    class="btn btn-cancel">Cancelar</button>
+                <button type="button" id="btnCancelBottom" class="btn btn-cancel">Cancelar</button>
             </div>
         </form>
     </div>

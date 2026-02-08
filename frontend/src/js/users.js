@@ -1,4 +1,4 @@
-import { getAuthHeaders, clearAuthSession, navigateTo } from './routes.js';
+import { getAuthHeaders, clearAuthSession, navigateTo, showConfirm } from './routes.js';
 
 export const initUsers = async () => {
     // Cargar roles y usuarios iniciales
@@ -15,9 +15,8 @@ export const initUsers = async () => {
         openModal();
     });
 
-    document.getElementById('btnCancelModal')?.addEventListener('click', () => {
-        closeModal();
-    });
+    document.getElementById('btnCancelModal')?.addEventListener('click', closeModal);
+    document.getElementById('btnCancelBottom')?.addEventListener('click', closeModal);
 
     document.getElementById('userForm')?.addEventListener('submit', handleFormSubmit);
 
@@ -33,10 +32,8 @@ export const initUsers = async () => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     if (user.username) {
         const userNameEl = document.getElementById('userName');
-        const userInitialsEl = document.getElementById('userInitials');
 
         if (userNameEl) userNameEl.textContent = user.nombres_apellidos || user.username;
-        if (userInitialsEl) userInitialsEl.textContent = ((user.username && user.username[0]) || 'A').toUpperCase();
     }
 };
 
@@ -141,7 +138,13 @@ const renderTable = (users) => {
     };
 
     window.toggleUser = async (id, currentStatus) => {
-        if (!confirm(`¿Estás seguro de ${currentStatus ? 'desactivar' : 'activar'} este usuario?`)) return;
+        const confirmed = await showConfirm({
+            title: currentStatus ? 'Desactivar Usuario' : 'Activar Usuario',
+            message: `¿Estás seguro de que deseas ${currentStatus ? 'desactivar' : 'activar'} este usuario?`,
+            type: currentStatus ? 'danger' : 'success'
+        });
+
+        if (!confirmed) return;
 
         try {
             const res = await fetch(`/api/admin/usuarios/${id}/toggle`, {
@@ -171,7 +174,7 @@ const openModal = (user = null) => {
     const title = document.getElementById('modalTitle');
     const passwordHelp = document.getElementById('passwordHelp');
 
-    modal.style.display = 'flex';
+    modal.classList.add('active');
     form.reset();
 
     if (user) {
@@ -194,7 +197,7 @@ const openModal = (user = null) => {
 };
 
 const closeModal = () => {
-    document.getElementById('userModal').style.display = 'none';
+    document.getElementById('userModal').classList.remove('active');
 };
 
 const handleFormSubmit = async (e) => {

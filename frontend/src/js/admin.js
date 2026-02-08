@@ -8,8 +8,6 @@ export default function initAdmin() {
     if (user.username) {
         const nameEl = document.getElementById('userName');
         if (nameEl) nameEl.textContent = user.nombres_apellidos || user.username;
-        const initEl = document.getElementById('userInitials');
-        if (initEl) initEl.textContent = (user.username || 'A').charAt(0).toUpperCase();
     }
 
     // 2. Configurar botón de logout

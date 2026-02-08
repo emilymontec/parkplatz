@@ -4,6 +4,56 @@
  * Incluye autenticación JWT y validación de roles.
  */
 
+/**
+ * Mostrar cuadro de confirmación personalizado
+ */
+export const showConfirm = ({ title, message, icon, okText, cancelText, type = 'warning' }) => {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirmModal');
+        const titleEl = document.getElementById('confirmTitle');
+        const messageEl = document.getElementById('confirmMessage');
+        const iconEl = document.getElementById('confirmIcon');
+        const okBtn = document.getElementById('confirmOkBtn');
+        const cancelBtn = document.getElementById('confirmCancelBtn');
+
+        if (!modal) return resolve(false);
+
+        // Configurar contenido
+        titleEl.textContent = title || '¿Estás seguro?';
+        messageEl.textContent = message || 'Esta acción requiere confirmación.';
+        okBtn.textContent = okText || 'Confirmar';
+        cancelBtn.textContent = cancelText || 'Cancelar';
+
+        // Configurar icono y color según tipo
+        let iconHtml = '<i class="fa-solid fa-circle-question"></i>';
+        let color = 'var(--warning)';
+
+        if (type === 'danger') {
+            iconHtml = '<i class="fa-solid fa-circle-exclamation"></i>';
+            color = 'var(--danger)';
+        } else if (type === 'success') {
+            iconHtml = '<i class="fa-solid fa-circle-check"></i>';
+            color = 'var(--success)';
+        }
+
+        iconEl.innerHTML = icon || iconHtml;
+        iconEl.style.color = color;
+
+        // Mostrar modal
+        modal.classList.add('active');
+
+        const cleanup = (result) => {
+            modal.classList.remove('active');
+            okBtn.onclick = null;
+            cancelBtn.onclick = null;
+            resolve(result);
+        };
+
+        okBtn.onclick = () => cleanup(true);
+        cancelBtn.onclick = () => cleanup(false);
+    });
+};
+
 // Configuración de rutas
 const routes = {
     '/': {
@@ -124,7 +174,7 @@ export const clearAuthSession = () => {
 const router = async () => {
     // 1. Obtener ruta actual (Pathname)
     let path = window.location.pathname;
-    
+
     // Normalizar ruta (limpiar barras extras al final, excepto si es raíz)
     if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1);
 
@@ -297,10 +347,10 @@ function setupInactivityListeners() {
 document.addEventListener('click', e => {
     // Buscar si el clic fue en un enlace (o hijo de un enlace)
     const link = e.target.closest('a');
-    
+
     if (link) {
         const href = link.getAttribute('href');
-        
+
         // Si es un enlace interno (comienza con /) y no es externo/anchor
         if (href && href.startsWith('/') && !href.startsWith('//') && !link.target) {
             e.preventDefault();
