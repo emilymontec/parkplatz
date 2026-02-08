@@ -1,18 +1,17 @@
 <nav class="navbar">
-    <a href="/admin" class="logo" style="display: flex; align-items: center; gap: 10px;">
-        <img src="/src/static/icons/logo.png" alt="Logo" style="width: 24px;">
+    <a href="/admin" class="logo">
+        <img src="/src/static/icons/logo.png" alt="Logo">
         <span>Parkplatz</span>
     </a>
     <div class="nav-links">
         <a href="/admin">Panel</a>
         <a href="/admin/users" class="active">Usuarios</a>
-        <a href="javascript:void(0)" style="pointer-events: none; opacity: 0.5;">Ajustes</a>
+        <a href="/admin/tarifas">Tarifas</a>
     </div>
     <div class="user-profile">
-        <div style="display: flex; flex-direction: column; align-items: flex-end;">
-            <span id="userName" style="font-size: 0.9rem; font-weight: 700;">Cargando...</span>
-            <span
-                style="font-size: 0.7rem; color: var(--primary); font-weight: 800; text-transform: uppercase;">Administrador</span>
+        <div class="user-info">
+            <span id="userName" class="user-name">Cargando...</span>
+            <span class="user-role">Administrador</span>
         </div>
         <button id="logoutBtn" class="btn btn-logout" style="padding: 10px; min-width: 42px;">
             <i class="fa-solid fa-right-from-bracket"></i>
@@ -70,10 +69,9 @@
 
             <div class="input-group">
                 <label>Nombre Completo</label>
-                <div style="position: relative;">
-                    <i class="fa-solid fa-signature"
-                        style="position: absolute; left: 16px; top: 16px; color: var(--text-dim);"></i>
-                    <input type="text" id="nombres_apellidos" class="input-field" style="padding-left: 48px;"
+                <div class="input-icon-container">
+                    <i class="fa-solid fa-signature input-icon"></i>
+                    <input type="text" id="nombres_apellidos" class="input-field input-with-icon"
                         placeholder="Ej: Juan Pérez" required>
                 </div>
             </div>
@@ -103,9 +101,9 @@
                     style="display: block; margin-top: 8px; color: var(--text-dim); font-size: 0.75rem;"></small>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 150px; gap: 1rem; margin-top: 2rem;">
-                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
                 <button type="button" id="btnCancelBottom" class="btn btn-cancel">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
             </div>
         </form>
     </div>

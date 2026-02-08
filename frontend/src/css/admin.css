@@ -15,6 +15,26 @@
     box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card i {
+    position: absolute;
+    right: 1.5rem;
+    bottom: 1.5rem;
+    /* Or top/right depending on preference */
+    font-size: 2.5rem;
+    color: var(--text-light);
+    opacity: 0.2;
+    transform: rotate(-10deg);
+    transition: var(--transition);
+}
+
+.stat-card:hover i {
+    opacity: 0.4;
+    transform: rotate(0deg) scale(1.1);
+    color: var(--primary);
 }
 
 .stat-label {
@@ -51,63 +71,5 @@
     font-size: 0.75rem;
 }
 
-/* Modals - Clean & Functional */
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.4);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
-}
-
-.modal-overlay.active {
-    display: flex;
-}
-
-.modal-content {
-    background: var(--bg-card);
-    width: 90%;
-    max-width: 480px;
-    padding: 2rem;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-}
-
-.modal-header h2 {
-    font-size: 1.25rem;
-    font-weight: 700;
-}
-
-.modal-close {
-    background: none;
-    border: none;
-    color: var(--text-light);
-    cursor: pointer;
-    font-size: 1.25rem;
-    display: flex;
-}
-
-.btn-action {
-    padding: 0.4rem;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-    background: white;
-    cursor: pointer;
-    color: var(--text-muted);
-    font-size: 0.875rem;
-}
-
-.btn-action:hover {
-    border-color: var(--primary);
-    color: var(--primary);
-}
+/* Modals - using global.css */
+/* Action Buttons - using global.css */

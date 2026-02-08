@@ -1,0 +1,116 @@
+<nav class="navbar">
+    <a href="/admin" class="logo">
+        <img src="/src/static/icons/logo.png" alt="Logo">
+        <span>Parkplatz</span>
+    </a>
+    <div class="nav-links">
+        <a href="/admin">Panel</a>
+        <a href="/admin/users">Usuarios</a>
+        <a href="/admin/tarifas" class="active">Tarifas</a>
+    </div>
+    <div class="user-profile">
+        <div class="user-info">
+            <span id="userName" class="user-name">Cargando...</span>
+            <span class="user-role">Administrador</span>
+        </div>
+        <button id="logoutBtn" class="btn btn-logout" style="padding: 10px; min-width: 42px;">
+            <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
+    </div>
+</nav>
+
+<main>
+    <div class="page-header">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%;">
+            <div>
+                <h1>Gestión de Tarifas</h1>
+                <p>Configura los precios, tipos de cobro y vigencia de las tarifas.</p>
+            </div>
+            <button id="btnCreateTarifa" class="btn btn-primary">
+                <i class="fa-solid fa-plus"></i> Nueva Tarifa
+            </button>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Vehículo</th>
+                    <th>Tipo Cobro</th>
+                    <th>Valor</th>
+                    <th>Vigencia</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tarifasTableBody">
+                <tr>
+                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 40px;">
+                        <i class="fa-solid fa-circle-notch fa-spin" style="margin-right: 8px;"></i>
+                        Cargando tarifas...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<!-- Modal Crear/Editar Tarifa -->
+<div id="tarifaModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Nueva Tarifa</h2>
+            <button class="modal-close" id="modalClose">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="tarifaForm">
+            <input type="hidden" id="tarifaId">
+
+            <div class="input-group">
+                <label for="nombre">Nombre de la Tarifa</label>
+                <input type="text" id="nombre" class="input-field" placeholder="Ej. Tarifa Plena 2026" required>
+            </div>
+
+            <div class="input-group">
+                <label for="tipoVehiculo">Tipo de Vehículo</label>
+                <select id="tipoVehiculo" class="input-field" required>
+                    <option value="">Cargando tipos de vehículo...</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="tipoCobro">Tipo de Cobro</label>
+                <select id="tipoCobro" class="input-field" required>
+                    <option value="POR_MINUTO">Por Minuto</option>
+                    <option value="POR_HORA">Por Hora</option>
+                    <option value="POR_DIA">Por Día</option>
+                    <option value="FRACCION">Por Fracción (15 min)</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="valor">Valor ($)</label>
+                <input type="number" id="valor" class="input-field" placeholder="0" min="0" step="50" required>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="input-group">
+                    <label for="fechaInicio">Fecha Inicio</label>
+                    <input type="date" id="fechaInicio" class="input-field" required>
+                </div>
+                <div class="input-group">
+                    <label for="fechaFin">Fecha Fin (Opcional)</label>
+                    <input type="date" id="fechaFin" class="input-field">
+                </div>
+            </div>
+
+            <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                <button type="button" class="btn btn-cancel" id="btnCancel">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="btnSave">Guardar Tarifa</button>
+            </div>
+        </form>
+    </div>
+</div>

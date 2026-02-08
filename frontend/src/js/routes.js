@@ -88,6 +88,14 @@ const routes = {
         controller: './users.js',
         initFn: 'initUsers'
     },
+    '/admin/tarifas': {
+        view: '/src/views/admin/tarifas.html',
+        styles: ['/src/css/global.css', '/src/css/admin.css'],
+        title: 'Gestión Tarifas - Parkplatz',
+        role: 'ADMINISTRADOR',
+        controller: './tarifas.js',
+        initFn: 'initTarifas'
+    },
     '/operario': {
         view: '/src/views/operario/dashboard.html',
         styles: ['/src/css/global.css', '/src/css/operario.css'],

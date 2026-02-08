@@ -23,29 +23,4 @@
     transition: width 0.4s ease;
 }
 
-/* Modals for Operario */
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.4);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
-}
-
-.modal-card {
-    background: var(--bg-card);
-    width: 90%;
-    max-width: 440px;
-    padding: 2rem;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-}
-
-.action-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-}
+/* Modals - using global.css */

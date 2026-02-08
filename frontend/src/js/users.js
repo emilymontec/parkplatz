@@ -52,7 +52,7 @@ const loadRoles = async () => {
 
         if (rolSelect) {
             rolSelect.innerHTML = roles.map(rol =>
-                `<option value="${rol.id_rol}">${rol.nombre}</option>`
+                `<option value="${rol.id_roles}">${rol.nombre}</option>`
             ).join('');
         }
     } catch (err) {
