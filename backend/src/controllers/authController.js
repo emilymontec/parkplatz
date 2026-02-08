@@ -16,11 +16,11 @@ export const login = async (req, res) => {
   }
 
   try {
-    // Buscar usuario en base de datos con JOIN de rol
+    // Buscar usuario en base de datos con JOIN de rol (por username o email)
     const { data: users, error } = await supabase
       .from("usuarios")
       .select("*, roles(nombre)")
-      .eq("username", username)
+      .or(`username.eq."${username}",email.eq."${username}"`)
       .limit(1);
 
     if (error) {

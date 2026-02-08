@@ -246,6 +246,17 @@ export const createUser = async (req, res) => {
     return res.status(400).json({ error: "Faltan campos requeridos" });
   }
 
+  // Validación de formato de email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: "Formato de email inválido" });
+  }
+
+  // Validación de longitud de contraseña
+  if (password.length < 6) {
+    return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
+  }
+
   try {
     // 1. Crear usuario en Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -324,6 +335,9 @@ export const updateUser = async (req, res) => {
 
     // 2. Si hay password, actualizar en Auth
     if (password && password.trim() !== "") {
+      if (password.length < 6) {
+        return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
+      }
       const { error: authError } = await supabase.auth.admin.updateUserById(
         id,
         { password: password }

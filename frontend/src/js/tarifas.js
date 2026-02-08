@@ -22,9 +22,18 @@ function setupUser() {
 
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            clearAuthSession();
-            navigateTo('/login');
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+            } catch (error) {
+                console.error("Logout error", error);
+            } finally {
+                clearAuthSession();
+                navigateTo('/login');
+            }
         });
     }
 }

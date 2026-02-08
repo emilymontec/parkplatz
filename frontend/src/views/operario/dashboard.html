@@ -46,6 +46,10 @@
                         Capacidad Total</p>
                     <h2 id="occupancyCount"
                         style="font-size: 2.2rem; font-weight: 800; color: var(--text-lead); margin-top: 5px;">0/45</h2>
+                    <div id="occupancyDetails" style="font-size: 0.9rem; color: var(--text-muted); margin-top: 4px; font-weight: 500;">
+                        <span id="autoStats"><i class="fa-solid fa-car"></i> --/--</span> &nbsp;|&nbsp; 
+                        <span id="motoStats"><i class="fa-solid fa-motorcycle"></i> --/--</span>
+                    </div>
                 </div>
                 <div
                     style="width: 50px; height: 50px; background: var(--primary-light); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary);">
@@ -64,7 +68,6 @@
             <h2 style="font-size: 1.2rem; font-weight: 800;">
                 <i class="fa-solid fa-car-side" style="color: var(--primary); margin-right: 12px;"></i> 
                 Vehículos en Patio 
-                <span id="vehiclesCountHeader" style="font-size: 1rem; color: var(--primary); font-weight: 700; margin-left: 8px;">(Cargando...)</span>
             </h2>
             <div style="position: relative;">
                 <i class="fa-solid fa-magnifying-glass"
@@ -79,6 +82,7 @@
                     <th>Placa</th>
                     <th>Tipo de Vehículo</th>
                     <th>Ingreso</th>
+                    <th>Tiempo</th>
                     <th>Estado</th>
                     <th style="text-align: right;">Acciones</th>
                 </tr>
@@ -197,6 +201,50 @@
                     <button type="button" id="btnBackSearch" class="btn btn-cancel">Atrás</button>
                     <button type="submit" class="btn btn-danger" style="flex: 1;">
                         <i class="fa-solid fa-check-to-slot"></i> Confirmar Salida
+                    </button>
+                </div>
+            </div>
+
+            <!-- Paso 3: Comprobante -->
+            <div id="stepReceipt" style="display: none; margin-top: 20px; text-align: center;">
+                <div id="receiptContent" style="background: white; padding: 20px; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05); margin-bottom: 20px; font-family: 'Courier New', Courier, monospace;">
+                    <h3 style="margin-bottom: 10px; border-bottom: 2px solid #333; padding-bottom: 10px; text-transform: uppercase;">Parkplatz</h3>
+                    
+                    <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                        <strong>Ticket #:</strong> <span id="receiptTicket">---</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                        <strong>Placa:</strong> <span id="receiptPlaca">---</span>
+                    </div>
+                    <div style="border-bottom: 1px dashed #ccc; margin: 10px 0;"></div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                        <span>Entrada:</span> <span id="receiptEntry">--:--</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                        <span>Salida:</span> <span id="receiptExit">--:--</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                        <span>Tiempo:</span> <span id="receiptDuration">---</span>
+                    </div>
+                    
+                    <div style="border-bottom: 1px dashed #ccc; margin: 10px 0;"></div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin: 10px 0; font-size: 1.2rem;">
+                        <strong>TOTAL:</strong> <span id="receiptTotal" style="font-weight: 800;">$0</span>
+                    </div>
+                    
+                    <div style="margin-top: 20px; display: flex; justify-content: center; flex-direction: column; align-items: center;">
+                        <div id="receiptQR" style="margin-bottom: 10px;"></div>
+                        <span style="font-size: 0.7rem; color: #999;">ID: <span id="receiptIdText"></span></span>
+                    </div>
+                    <p style="font-size: 0.8rem; color: #666; margin-top: 15px;">¡Gracias por su visita!</p>
+                </div>
+
+                <div class="btn-group" style="display: flex; gap: 1rem;">
+                    <button type="button" id="btnCloseReceipt" class="btn btn-primary" style="flex: 1;">Finalizar</button>
+                    <button type="button" id="btnPrintReceipt" class="btn btn-secondary" title="Imprimir Comprobante">
+                        <i class="fa-solid fa-print"></i>
                     </button>
                 </div>
             </div>

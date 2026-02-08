@@ -31,8 +31,8 @@
     </div>
 
     <div class="stats-grid">
-        <div class="stat-card">
-            <span class="stat-label">Ingresos de Hoy</span>
+        <div class="stat-card" id="cardIngresos" style="cursor: pointer;" title="Ver desglose">
+            <span class="stat-label">Ingresos de Hoy <i class="fa-solid fa-circle-info" style="font-size: 12px; margin-left: 5px;"></i></span>
             <h2 id="todayIncome" class="stat-value text-success">$0</h2>
             <i class="fa-solid fa-money-bill-trend-up"></i>
         </div>
@@ -46,12 +46,6 @@
             <h2 id="activeVehicles" class="stat-value text-primary">0</h2>
             <i class="fa-solid fa-car-side"></i>
         </div>
-    </div>
-
-    <!-- Detalles de ganancias por tarifa -->
-    <div id="gananciasContainer" style="display: none; margin: 2rem 0; padding: 1.5rem; background: #f9f9f9; border-radius: 8px; border-left: 4px solid var(--success);">
-        <h3 style="margin-top: 0; color: var(--success);">Desglose de Ganancias</h3>
-        <div id="detalleGanancias"></div>
     </div>
 
     <div class="table-container">
@@ -82,5 +76,23 @@
                 </tr>
             </tbody>
         </table>
+    </div>
+
+    <!-- Modal Desglose Ganancias -->
+    <div id="gananciasModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Desglose de Ingresos</h2>
+                <button class="modal-close" id="closeGananciasModal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="detalleGananciasModalBody">
+                <!-- Se llena dinámicamente -->
+            </div>
+            <div style="margin-top: 1.5rem; text-align: right;">
+                <button class="btn btn-primary" id="btnCerrarGanancias">Cerrar</button>
+            </div>
+        </div>
     </div>
 </main>

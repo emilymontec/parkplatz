@@ -80,6 +80,22 @@ export default function initOperator() {
         };
     }
 
+    const btnCloseReceipt = document.getElementById('btnCloseReceipt');
+    const btnPrintReceipt = document.getElementById('btnPrintReceipt');
+
+    if (btnCloseReceipt) {
+        btnCloseReceipt.onclick = () => {
+            document.getElementById('exitModal').style.display = 'none';
+            resetExitModal();
+        };
+    }
+
+    if (btnPrintReceipt) {
+        btnPrintReceipt.onclick = () => {
+            printReceipt();
+        };
+    }
+
     if (exitForm) {
         exitForm.onsubmit = async (e) => {
             e.preventDefault();
@@ -106,6 +122,19 @@ export default function initOperator() {
 
             const placa = form.placa.value.toUpperCase();
             const tipo = form.tipo.value;
+
+            // Validación de formato de placa en frontend
+            const plateRegex = /^[A-Z]{3}[0-9]{2}[A-Z0-9]$/;
+            if (!plateRegex.test(placa)) {
+                await showAlert({
+                    title: 'Formato Inválido',
+                    message: 'La placa debe tener el formato AAA123 o AAA12B',
+                    type: 'warning'
+                });
+                btn.disabled = false;
+                btn.innerText = originalText;
+                return;
+            }
 
             try {
                 const res = await fetch('/api/registros/entrada', {
@@ -229,12 +258,12 @@ async function loadVehicles() {
             renderVehicles(vehicles);
         }
         
-        updateStats(vehicles.length);
+        updateQuotaStats();
 
     } catch (err) {
         console.error(err);
         tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red; padding: 20px;">Error: ${err.message}</td></tr>`;
-        updateStats(0); // Resetear stats en error
+        updateQuotaStats(); // Intentar actualizar incluso si falla la lista
     }
 }
 
@@ -243,13 +272,39 @@ function renderVehicles(vehicles) {
     if (!tbody) return;
 
     if (vehicles.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color: #666;">No hay vehículos en el parqueadero</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px; color: #666;">No hay vehículos en el parqueadero</td></tr>';
         return;
     }
 
     tbody.innerHTML = vehicles.map(v => {
-        const horaEntrada = new Date(v.entrada).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+        const entrada = new Date(v.entrada);
+        const ahora = new Date();
+        
+        // Calcular diferencia asegurando no negativos
+        let diffMs = ahora - entrada;
+        if (diffMs < 0) diffMs = 0;
+        
+        const diffMins = Math.floor(diffMs / 60000);
+        
+        let tiempoTexto = 'Hace un momento';
+        if (diffMins > 0) {
+            const horas = Math.floor(diffMins / 60);
+            const minutos = diffMins % 60;
+            if (horas > 0) {
+                tiempoTexto = `${horas}h ${minutos}m`;
+            } else {
+                tiempoTexto = `${minutos} min`;
+            }
+        }
 
+        // Formatear hora forzando zona horaria Colombia
+        const horaEntrada = entrada.toLocaleTimeString('es-CO', { 
+            timeZone: 'America/Bogota',
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: true 
+        });
+        
         const tipoNombre = v.tipos_vehiculo?.nombre || 'Desconocido';
 
         return `
@@ -257,6 +312,7 @@ function renderVehicles(vehicles) {
             <td><span class="plate-badge">${v.placa}</span></td>
             <td>${tipoNombre}</td>
             <td>${horaEntrada}</td>
+            <td><span style="font-weight: 600; color: var(--text-lead);"><i class="fa-regular fa-clock"></i> ${tiempoTexto}</span></td>
             <td><span class="badge badge-success">En Patio</span></td>
             <td style="text-align: right;">
                 <button class="btn btn-logout" 
@@ -274,8 +330,15 @@ function resetExitModal() {
     if (input) input.value = '';
     const stepSearch = document.getElementById('stepSearch');
     const stepSummary = document.getElementById('stepSummary');
+    const stepReceipt = document.getElementById('stepReceipt');
+    
     if (stepSearch) stepSearch.style.display = 'block';
     if (stepSummary) stepSummary.style.display = 'none';
+    if (stepReceipt) stepReceipt.style.display = 'none';
+    
+    // Clear receipt data
+    const qr = document.getElementById('receiptQR');
+    if (qr) qr.innerHTML = '';
 }
 
 async function calculateExit(placa) {
@@ -329,18 +392,10 @@ async function processExit(placa) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al procesar salida');
         
-        // Close modal
-        document.getElementById('exitModal').style.display = 'none';
+        // Show Receipt Step instead of closing
+        showReceipt(data);
         
-        // Show success
-        await showAlert({
-            title: 'Salida Exitosa',
-            message: `Vehículo ${placa} retirado.\nCobro realizado: ${document.getElementById('summaryTotal').textContent}`,
-            type: 'success',
-            btnText: 'Aceptar'
-        });
-        
-        loadVehicles(); // Refresh list
+        loadVehicles(); // Refresh list in background
         
     } catch (err) {
         await showAlert({ title: 'Error', message: err.message, type: 'error' });
@@ -384,21 +439,118 @@ async function handleLogout() {
     }
 }
 
-function updateStats(count) {
-    const total = 45; // Capacidad total (30 autos + 15 motos)
-    const countEl = document.getElementById('occupancyCount');
-    const progressEl = document.getElementById('occupancyProgress');
-    const headerCountEl = document.getElementById('vehiclesCountHeader');
+async function updateQuotaStats() {
+    try {
+        const res = await fetch('/api/registros/cupos', {
+            headers: getAuthHeaders()
+        });
+        
+        if (!res.ok) return;
 
-    if (countEl) countEl.textContent = `${count}/${total}`;
+        const data = await res.json();
+        // data structure: { autos: {active, total}, motos: {active, total}, total: {active, limit} }
+
+        const countEl = document.getElementById('occupancyCount');
+        const progressEl = document.getElementById('occupancyProgress');
+        const autoStatsEl = document.getElementById('autoStats');
+        const motoStatsEl = document.getElementById('motoStats');
+
+        if (countEl) countEl.textContent = `${data.total.active}/${data.total.limit}`;
+        
+        if (autoStatsEl) {
+             autoStatsEl.innerHTML = `<i class="fa-solid fa-car"></i> ${data.autos.active}/${data.autos.total}`;
+             autoStatsEl.style.color = data.autos.active >= data.autos.total ? 'var(--danger)' : 'inherit';
+             if (data.autos.active >= data.autos.total) autoStatsEl.style.fontWeight = 'bold';
+        }
+        if (motoStatsEl) {
+             motoStatsEl.innerHTML = `<i class="fa-solid fa-motorcycle"></i> ${data.motos.active}/${data.motos.total}`;
+             motoStatsEl.style.color = data.motos.active >= data.motos.total ? 'var(--danger)' : 'inherit';
+             if (data.motos.active >= data.motos.total) motoStatsEl.style.fontWeight = 'bold';
+        }
+
+        if (progressEl) {
+            const percent = Math.min((data.total.active / data.total.limit) * 100, 100);
+            progressEl.style.width = `${percent}%`;
+            
+            if (percent >= 100) {
+                progressEl.style.backgroundColor = 'var(--danger)';
+            } else if (percent > 80) {
+                progressEl.style.backgroundColor = 'var(--warning)';
+            } else {
+                progressEl.style.backgroundColor = 'var(--primary)';
+            }
+        }
+
+    } catch (err) {
+        console.error("Error updating quota stats:", err);
+    }
+}
+
+function showReceipt(data) {
+    // Hide others
+    document.getElementById('stepSearch').style.display = 'none';
+    document.getElementById('stepSummary').style.display = 'none';
+    document.getElementById('stepReceipt').style.display = 'block';
+
+    const reg = data.data; // Updated record
+    const ticketId = reg.id_registro;
+    const entrada = new Date(reg.entrada);
+    const salida = new Date(reg.salida);
     
-    if (headerCountEl) {
-        headerCountEl.textContent = `(${count} / ${total})`;
-        headerCountEl.style.display = 'inline-block'; // Asegurar visibilidad
-    }
+    document.getElementById('receiptTicket').textContent = ticketId;
+    document.getElementById('receiptPlaca').textContent = reg.placa;
+    document.getElementById('receiptEntry').textContent = entrada.toLocaleTimeString('es-CO', {hour: '2-digit', minute:'2-digit'});
+    document.getElementById('receiptExit').textContent = salida.toLocaleTimeString('es-CO', {hour: '2-digit', minute:'2-digit'});
+    document.getElementById('receiptDuration').textContent = `${data.duracion_minutos} min`;
+    document.getElementById('receiptIdText').textContent = ticketId;
+    
+    const totalFormatted = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(data.costo_total);
+    document.getElementById('receiptTotal').textContent = totalFormatted;
 
-    if (progressEl) {
-        const percent = Math.min((count / total) * 100, 100);
-        progressEl.style.width = `${percent}%`;
+    // Generate QR
+    const qrContainer = document.getElementById('receiptQR');
+    qrContainer.innerHTML = ''; // Clear previous
+    try {
+        if (window.QRCode) {
+            new QRCode(qrContainer, {
+                text: ticketId.toString(),
+                width: 128,
+                height: 128,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        } else {
+            qrContainer.textContent = "QR Lib Missing";
+        }
+    } catch (e) {
+        console.error("Error generating QR", e);
+        qrContainer.textContent = "Error QR";
     }
+}
+
+function printReceipt() {
+    const content = document.getElementById('receiptContent').innerHTML;
+    const win = window.open('', '', 'height=600,width=400');
+    win.document.write('<html><head><title>Comprobante</title>');
+    // Basic print styles
+    win.document.write(`
+        <style>
+            body { font-family: 'Courier New', monospace; text-align: center; padding: 20px; } 
+            #receiptQR { margin: 20px auto; display: flex; justify-content: center; }
+            #receiptQR img { margin: 0 auto; }
+            h3 { border-bottom: 2px solid black; padding-bottom: 10px; }
+            div { margin: 5px 0; }
+            .total { font-size: 1.5em; font-weight: bold; margin-top: 15px; }
+        </style>
+    `);
+    win.document.write('</head><body>');
+    win.document.write(content);
+    win.document.write('</body></html>');
+    win.document.close();
+    win.focus();
+    setTimeout(() => {
+        win.print();
+        win.close();
+    }, 500);
 }
