@@ -1,4 +1,5 @@
 import { supabase } from "../config/db.js";
+import { getCurrentISOString, calculateMinutesDifference, formatLocalDate, formatLocalTime } from "../utils/dateUtils.js";
 
 const CAPACITY = {
   AUTO: 30, // IDs 1 (Sedan) y 2 (Camioneta)
@@ -166,10 +167,11 @@ export const registerEntry = async (req, res) => {
     if (tarifaError) throw tarifaError;
 
     // Preparar datos para insertar
+    // Usar getCurrentISOString() que maneja la zona horaria correctamente
     const registroData = {
       placa,
       vehiculo_id: tipo_vehiculo_id,
-      entrada: new Date().toISOString(),
+      entrada: getCurrentISOString(),
       estado: "EN_CURSO",
       usuario_entrada: req.user.id,
       tarifa_id: tarifaActiva ? tarifaActiva.id_tarifa : null
@@ -302,10 +304,18 @@ export const registerEntry = async (req, res) => {
     }
     
     // El espacio ya fue marcado como ocupado antes del insert
+    console.log('[registerEntry] Response data:', JSON.stringify(data, null, 2));
+    
+    const responseData = {
+      ...data,
+      entrada_formateada: formatLocalDate(data.entrada)
+    };
+    
+    console.log('[registerEntry] Final response:', JSON.stringify(responseData, null, 2));
     
     res.status(201).json({ 
       message: "Entrada registrada",
-      data
+      data: responseData
     });
   } catch (err) {
     console.error("Error registering entry:", err);
@@ -356,17 +366,12 @@ export const registerExit = async (req, res) => {
     // ---------------------------------------------------------
     // 1. Hora salida
     // ---------------------------------------------------------
-    const entrada = new Date(registro.entrada);
-    const salida = new Date();
+    const salida = getCurrentISOString();
 
     // ---------------------------------------------------------
     // 2. Minutos totales
     // ---------------------------------------------------------
-    // Asegurar que no de negativo por desincronización de reloj
-    let diffMs = salida - entrada;
-    if (diffMs < 0) diffMs = 0;
-
-    const diffMins = Math.ceil(diffMs / 60000);
+    const diffMins = calculateMinutesDifference(registro.entrada, salida);
     
     // ---------------------------------------------------------
     // 3. Obtener tarifa aplicable
@@ -447,7 +452,7 @@ export const registerExit = async (req, res) => {
     const { data, error } = await supabase
       .from("registros")
       .update({
-        salida: salida.toISOString(),
+        salida: salida,
         estado: "FINALIZADO",
         total_minutos: diffMins,
         valor_calculado: costoTotal,
@@ -468,9 +473,19 @@ export const registerExit = async (req, res) => {
         .eq('id_espacio', registro.espacio_id);
     }
     
+    console.log('[registerExit] Response data:', JSON.stringify(data, null, 2));
+    
+    const responseData = {
+      ...data,
+      entrada_formateada: formatLocalDate(data.entrada),
+      salida_formateada: formatLocalDate(data.salida)
+    };
+    
+    console.log('[registerExit] Final response:', JSON.stringify(responseData, null, 2));
+    
     res.json({ 
       message: "Salida registrada",
-      data,
+      data: responseData,
       duracion_minutos: diffMins,
       costo_total: costoTotal
     });
@@ -514,14 +529,8 @@ export const previewExit = async (req, res) => {
     }
 
     // Calcular tiempo
-    const entrada = new Date(registro.entrada);
-    const salida = new Date(); // Hora actual simulada de salida
-    
-    // Asegurar que no de negativo por desincronización de reloj
-    let diffMs = salida - entrada;
-    if (diffMs < 0) diffMs = 0;
-
-    const diffMins = Math.ceil(diffMs / 60000);
+    const salida = getCurrentISOString();
+    const diffMins = calculateMinutesDifference(registro.entrada, salida);
     
     // Obtener tarifa aplicable (Prioridad: Asignada al ingreso > Vigente actual)
     let tarifaActiva = null;
@@ -595,7 +604,9 @@ export const previewExit = async (req, res) => {
       placa: registro.placa,
       tipo_vehiculo: registro.tipos_vehiculo?.nombre,
       entrada: registro.entrada,
-      salida_estimada: salida.toISOString(),
+      entrada_formateada: formatLocalDate(registro.entrada),
+      salida_estimada: salida,
+      salida_estimada_formateada: formatLocalDate(salida),
       duracion_minutos: diffMins,
       tarifa_nombre: tarifaNombre,
       costo_total: costoTotal

@@ -287,7 +287,9 @@ function renderVehicles(vehicles) {
         const diffMins = Math.floor(diffMs / 60000);
         
         let tiempoTexto = 'Hace un momento';
-        if (diffMins > 0) {
+        
+        // CORRECCIÓN: Mostrar siempre los minutos, incluso si es 0
+        if (diffMins >= 0) {
             const horas = Math.floor(diffMins / 60);
             const minutos = diffMins % 60;
             if (horas > 0) {
@@ -295,6 +297,9 @@ function renderVehicles(vehicles) {
             } else {
                 tiempoTexto = `${minutos} min`;
             }
+        } else {
+             // Caso borde: Reloj desincronizado (futuro)
+             tiempoTexto = '0 min';
         }
 
         // Formatear hora forzando zona horaria Colombia
