@@ -28,7 +28,7 @@ export default function initOperator() {
     loadVehicleTypes(); // Cargar tipos dinámicos
     loadVehicles();
 
-    // 5. Lógica de Modal
+    // 5. Lógica de Modal Entrada
     if (btnEntry) {
         btnEntry.onclick = () => {
             if (modal) modal.style.display = 'flex';
@@ -41,12 +41,58 @@ export default function initOperator() {
         }
     }
 
-    // Cerrar al hacer clic fuera del card
-    if (modal) {
-        modal.onclick = (e) => {
-            if (e.target === modal) modal.style.display = 'none';
+    // New: Lógica de Modal Salida
+    const exitModal = document.getElementById('exitModal');
+    const btnExit = document.getElementById('btnExit');
+    const btnCancelExit = document.getElementById('btnCancelExit');
+    const exitForm = document.getElementById('exitForm');
+    const btnSearchPlate = document.getElementById('btnSearchPlate');
+    const btnBackSearch = document.getElementById('btnBackSearch');
+
+    if (btnExit) {
+        btnExit.onclick = () => {
+            resetExitModal();
+            if (exitModal) exitModal.style.display = 'flex';
+        };
+    }
+
+    if (btnCancelExit && exitModal) {
+        btnCancelExit.onclick = () => {
+            exitModal.style.display = 'none';
         }
     }
+
+    if (btnSearchPlate) {
+        btnSearchPlate.onclick = async () => {
+            const placa = document.getElementById('placaSearchInput').value.trim().toUpperCase();
+            if (!placa) {
+                await showAlert({ title: 'Error', message: 'Por favor ingrese una placa', type: 'warning' });
+                return;
+            }
+            await calculateExit(placa);
+        };
+    }
+
+    if (btnBackSearch) {
+        btnBackSearch.onclick = () => {
+            document.getElementById('stepSummary').style.display = 'none';
+            document.getElementById('stepSearch').style.display = 'block';
+        };
+    }
+
+    if (exitForm) {
+        exitForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const placa = document.getElementById('summaryPlaca').textContent;
+            await processExit(placa);
+        };
+    }
+
+    // Cerrar al hacer clic fuera del card
+    window.onclick = (e) => {
+        if (e.target === modal) modal.style.display = 'none';
+        if (e.target === exitModal) exitModal.style.display = 'none';
+    };
 
     // 6. Submit Formulario (ENTRADA)
     if (form) {
@@ -223,50 +269,93 @@ function renderVehicles(vehicles) {
     `}).join('');
 }
 
-// Función global para poder llamarla desde el HTML onclick
-window.procesarSalida = async (placa) => {
-    const confirmed = await showConfirm({
-        title: 'Confirmar Salida',
-        message: `¿Deseas registrar la salida del vehículo con placa ${placa}?`,
-        type: 'warning',
-        okText: 'Registrar Salida'
-    });
+function resetExitModal() {
+    const input = document.getElementById('placaSearchInput');
+    if (input) input.value = '';
+    const stepSearch = document.getElementById('stepSearch');
+    const stepSummary = document.getElementById('stepSummary');
+    if (stepSearch) stepSearch.style.display = 'block';
+    if (stepSummary) stepSummary.style.display = 'none';
+}
 
-    if (!confirmed) return;
+async function calculateExit(placa) {
+    const btn = document.getElementById('btnSearchPlate');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Calculando...';
 
+    try {
+        const res = await fetch(`/api/registros/preview-salida?placa=${placa}`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (res.status === 404) {
+            throw new Error('No se encontró vehículo activo con esta placa.');
+        }
+        
+        const data = await res.json();
+        
+        // Populate Summary
+        document.getElementById('summaryPlaca').textContent = data.placa;
+        document.getElementById('summaryType').textContent = data.tipo_vehiculo || 'N/A';
+        document.getElementById('summaryEntry').textContent = new Date(data.entrada).toLocaleTimeString('es-CO', {hour: '2-digit', minute:'2-digit'});
+        document.getElementById('summaryExit').textContent = new Date(data.salida_estimada).toLocaleTimeString('es-CO', {hour: '2-digit', minute:'2-digit'});
+        document.getElementById('summaryDuration').textContent = `${data.duracion_minutos} min`;
+        document.getElementById('summaryTariff').textContent = data.tarifa_nombre;
+        
+        const totalFormatted = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(data.costo_total);
+        document.getElementById('summaryTotal').textContent = totalFormatted;
+        
+        // Switch View
+        document.getElementById('stepSearch').style.display = 'none';
+        document.getElementById('stepSummary').style.display = 'block';
+
+    } catch (err) {
+        await showAlert({ title: 'Error', message: err.message, type: 'error' });
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+async function processExit(placa) {
     try {
         const res = await fetch('/api/registros/salida', {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify({ placa })
         });
-
-        if (res.status === 401) {
-            clearAuthSession();
-            navigateTo('/login');
-            return;
-        }
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Error al registrar salida');
-
-        const total = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(data.costo_total);
         
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al procesar salida');
+        
+        // Close modal
+        document.getElementById('exitModal').style.display = 'none';
+        
+        // Show success
         await showAlert({
-            title: 'Salida Registrada',
-            message: `Placa: ${placa}\n\n⏱️ Tiempo: ${data.duracion_minutos} min\n💰 Costo: ${total}`,
+            title: 'Salida Exitosa',
+            message: `Vehículo ${placa} retirado.\nCobro realizado: ${document.getElementById('summaryTotal').textContent}`,
             type: 'success',
             btnText: 'Aceptar'
         });
-
-        loadVehicles();
-
+        
+        loadVehicles(); // Refresh list
+        
     } catch (err) {
-        await showAlert({
-            title: 'Error de Salida',
-            message: err.message,
-            type: 'error'
-        });
+        await showAlert({ title: 'Error', message: err.message, type: 'error' });
+    }
+}
+
+// Función global para poder llamarla desde el HTML onclick
+window.procesarSalida = (placa) => {
+    const modal = document.getElementById('exitModal');
+    if (modal) {
+        resetExitModal();
+        const input = document.getElementById('placaSearchInput');
+        if (input) input.value = placa;
+        modal.style.display = 'flex';
+        calculateExit(placa); // Auto-calculate
     }
 };
 

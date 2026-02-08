@@ -6,7 +6,8 @@ import {
   getRoles,
   createUser,
   updateUser,
-  toggleUserStatus
+  toggleUserStatus,
+  getRegistrosDebug
 } from "../controllers/adminController.js";
 import {
   getTarifas,
@@ -25,6 +26,9 @@ router.use(authorize("ADMINISTRADOR"));
 
 // Dashboard estadísticas
 router.get("/stats", getDashboardStats);
+
+// DEBUG: Ver datos completos de registros de hoy
+router.get("/debug/registros-hoy", getRegistrosDebug);
 
 // Historial de registros
 router.get("/registros", getRegistrosHistory);

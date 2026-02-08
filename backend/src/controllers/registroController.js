@@ -98,13 +98,26 @@ export const registerEntry = async (req, res) => {
       });
     }
 
+    // Buscar tarifa ACTIVA para el tipo de vehículo (Asignación al entrar)
+    const { data: tarifaActiva, error: tarifaError } = await supabase
+      .from('tarifas')
+      .select('id_tarifa')
+      .eq('tipo_vehiculo_id', tipo_vehiculo_id)
+      .eq('activo', true)
+      .order('id_tarifa', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (tarifaError) throw tarifaError;
+
     // Preparar datos para insertar
     const registroData = {
       placa,
       vehiculo_id: tipo_vehiculo_id,
       entrada: new Date().toISOString(),
       estado: "EN_CURSO",
-      usuario_entrada: req.user.id
+      usuario_entrada: req.user.id,
+      tarifa_id: tarifaActiva ? tarifaActiva.id_tarifa : null
     };
 
      // Manejo inteligente de Espacio ID (Auto-asignación)
@@ -217,15 +230,16 @@ export const registerExit = async (req, res) => {
   }
 
   try {
-    // Buscar registro activo
+    // Buscar registro activo con tarifa asignada
     const { data: registro, error: findError } = await supabase
       .from("registros")
       .select(`
         id_registro,
         entrada,
         tarifa_id,
+        vehiculo_id,
         espacio_id,
-        tarifas(valor, tipo_cobro)
+        tarifas(id_tarifa, valor, tipo_cobro)
       `)
       .eq("placa", placa)
       .eq("estado", "EN_CURSO")
@@ -238,40 +252,68 @@ export const registerExit = async (req, res) => {
       });
     }
 
-    // Calcular tiempo y costo
+    // Calcular tiempo
     const entrada = new Date(registro.entrada);
     const salida = new Date();
-    const diffMs = salida - entrada;
+    
+    // Asegurar que no de negativo por desincronización de reloj
+    let diffMs = salida - entrada;
+    if (diffMs < 0) diffMs = 0;
+
     const diffMins = Math.ceil(diffMs / 60000);
     
-    // Tarifa: Si existe tarifa en BD usarla, sino $100 por minuto por defecto
+    // Usar la tarifa asignada al momento de entrada
+    const tarifa = registro.tarifas;
     let costoTotal = 0;
     
-    if (registro.tarifas) {
-      const tarifa = registro.tarifas;
-      const valor = parseFloat(tarifa.valor);
+    console.log(`[registerExit] Registro: ${registro.id_registro}, Placa: ${placa}`);
+    console.log(`[registerExit] Tarifa asignada:`, tarifa);
+    
+    if (tarifa && tarifa.id_tarifa) {
+      const valor = Number(tarifa.valor) || 0;
       
-      switch (tarifa.tipo_cobro) {
-        case 'POR_MINUTO':
-          costoTotal = diffMins * valor;
-          break;
-        case 'POR_HORA':
-          costoTotal = Math.ceil(diffMins / 60) * valor;
-          break;
-        case 'POR_DIA':
-          costoTotal = Math.ceil(diffMins / (24 * 60)) * valor;
-          break;
-        case 'FRACCION':
-          // Por cada fracción (ej: cada 15 min)
-          costoTotal = Math.ceil(diffMins / 15) * valor;
-          break;
-        default:
-          costoTotal = diffMins * 100; // Fallback
+      // Validar que valor sea un número válido y positivo
+      if (isNaN(valor) || valor <= 0) {
+        console.error(`[registerExit] Valor de tarifa inválido: ${tarifa.valor}, usando valor por defecto 100`);
+        costoTotal = diffMins * 100;
+      } else {
+        console.log(`[registerExit] Minutos: ${diffMins}, Valor tarifa: ${valor}, Tipo: ${tarifa.tipo_cobro}`);
+        
+        switch (tarifa.tipo_cobro) {
+          case 'POR_MINUTO':
+            costoTotal = diffMins * valor;
+            break;
+          case 'POR_HORA':
+            // Cobro por hora o fracción
+            costoTotal = Math.ceil(diffMins / 60) * valor;
+            break;
+          case 'POR_DIA':
+            // Cobro por día o fracción
+            costoTotal = Math.ceil(diffMins / (24 * 60)) * valor;
+            break;
+          case 'FRACCION':
+            // Por cada fracción de 15 min (ejemplo estándar)
+            costoTotal = Math.ceil(diffMins / 15) * valor;
+            break;
+          default:
+            costoTotal = diffMins * valor;
+        }
+        console.log(`[registerExit] Costo calculado: ${costoTotal}`);
       }
     } else {
-      // Tarifa por defecto
+      // Fallback si no hay tarifa asignada: $100 por minuto (valor por defecto seguro)
+      console.warn(`[registerExit] No hay tarifa asignada para el registro ${registro.id_registro}, usando tarifa por defecto.`);
       costoTotal = diffMins * 100;
     }
+    
+    // Asegurar que el costo no sea negativo y sea un número válido
+    if (isNaN(costoTotal) || costoTotal < 0) {
+      console.error(`[registerExit] Costo inválido calculado: ${costoTotal}, estableciendo a 0`);
+      costoTotal = 0;
+    }
+    
+    // Redondear a 2 decimales
+    costoTotal = Math.round(costoTotal * 100) / 100;
 
     // Actualizar registro con salida
     const { data, error } = await supabase
@@ -309,5 +351,99 @@ export const registerExit = async (req, res) => {
       error: err.message,
       code: "DB_ERROR"
     });
+  }
+};
+
+/**
+ * Previsualizar salida (Cálculo de cobro sin procesar)
+ * Ruta protegida: Solo OPERARIO
+ */
+export const previewExit = async (req, res) => {
+  const { placa } = req.query;
+
+  if (!placa) {
+    return res.status(400).json({ error: "Placa es requerida" });
+  }
+
+  try {
+    // Buscar registro activo
+    const { data: registro, error: findError } = await supabase
+      .from("registros")
+      .select(`
+        id_registro,
+        entrada,
+        placa,
+        vehiculo_id,
+        tipos_vehiculo(nombre)
+      `)
+      .eq("placa", placa)
+      .eq("estado", "EN_CURSO")
+      .maybeSingle();
+
+    if (findError || !registro) {
+      return res.status(404).json({ error: "No se encontró vehículo activo con esta placa" });
+    }
+
+    // Calcular tiempo
+    const entrada = new Date(registro.entrada);
+    const salida = new Date(); // Hora actual simulada de salida
+    
+    let diffMs = salida - entrada;
+    if (diffMs < 0) diffMs = 0;
+
+    const diffMins = Math.ceil(diffMs / 60000);
+    
+    // Buscar tarifa
+    const { data: tarifaActiva } = await supabase
+        .from('tarifas')
+        .select('*')
+        .eq('tipo_vehiculo_id', registro.vehiculo_id)
+        .eq('activo', true)
+        .order('id_tarifa', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    let costoTotal = 0;
+    let tarifaNombre = "Tarifa por defecto";
+    
+    if (tarifaActiva) {
+      tarifaNombre = tarifaActiva.nombre;
+      const valor = parseFloat(tarifaActiva.valor);
+      
+      switch (tarifaActiva.tipo_cobro) {
+        case 'POR_MINUTO':
+          costoTotal = diffMins * valor;
+          break;
+        case 'POR_HORA':
+          costoTotal = Math.ceil(diffMins / 60) * valor;
+          break;
+        case 'POR_DIA':
+          costoTotal = Math.ceil(diffMins / (24 * 60)) * valor;
+          break;
+        case 'FRACCION':
+          costoTotal = Math.ceil(diffMins / 15) * valor;
+          break;
+        default:
+          costoTotal = diffMins * valor;
+      }
+    } else {
+      costoTotal = diffMins * 100;
+    }
+    
+    if (costoTotal < 0) costoTotal = 0;
+
+    res.json({
+      placa: registro.placa,
+      tipo_vehiculo: registro.tipos_vehiculo?.nombre,
+      entrada: registro.entrada,
+      salida_estimada: salida.toISOString(),
+      duracion_minutos: diffMins,
+      tarifa_nombre: tarifaNombre,
+      costo_total: costoTotal
+    });
+
+  } catch (err) {
+    console.error("Error previewing exit:", err);
+    res.status(500).json({ error: err.message });
   }
 };

@@ -2,7 +2,8 @@ import { Router } from "express";
 import { 
   getActiveVehicles, 
   registerEntry, 
-  registerExit 
+  registerExit,
+  previewExit
 } from "../controllers/registroController.js";
 import { getTiposVehiculo } from "../controllers/tarifaController.js";
 import { authenticate, authorize } from "../middlewares/authMiddleware.js";
@@ -18,6 +19,9 @@ router.get("/tipos-vehiculo", getTiposVehiculo);
 
 // Obtener vehículos activos
 router.get("/activos", getActiveVehicles);
+
+// Previsualizar salida (Cálculo)
+router.get("/preview-salida", previewExit);
 
 // Registrar entrada
 router.post("/entrada", registerEntry);

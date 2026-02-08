@@ -47,11 +47,15 @@ async function loadDashboardData() {
         const active = document.getElementById('activeVehicles');
 
         if (income) {
+            const gananciaTotal = Number(stats.gananciasHoy) || 0;
+            // Validar que sea un número positivo válido
+            const gananciaValida = (!isNaN(gananciaTotal) && gananciaTotal >= 0) ? gananciaTotal : 0;
+            
             income.textContent = new Intl.NumberFormat('es-CO', { 
                 style: 'currency', 
                 currency: 'COP', 
                 maximumFractionDigits: 0 
-            }).format(stats.ingresosHoy || 0);
+            }).format(gananciaValida);
         }
         
         if (occupancy) {
@@ -64,6 +68,37 @@ async function loadDashboardData() {
         
         if (active) {
             active.textContent = stats.ocupacionActual || 0;
+        }
+
+        // Mostrar detalles de ganancias por tarifa si existe
+        if (stats.gananciasDetalle && stats.gananciasDetalle.length > 0) {
+            const containerEl = document.getElementById('gananciasContainer');
+            const detalleEl = document.getElementById('detalleGanancias');
+            if (containerEl && detalleEl) {
+                containerEl.style.display = 'block';
+                const detalleHTML = stats.gananciasDetalle.map(detalle => `
+                    <div style="margin: 12px 0; padding: 12px; background: white; border-radius: 6px; border-left: 3px solid var(--primary);">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div>
+                                <strong style="font-size: 1rem; color: var(--primary);">${detalle.nombre}</strong><br/>
+                                <span style="font-size: 0.85rem; color: var(--text-muted);">
+                                    ${detalle.tipo_cobro} • ${detalle.cantidad_registros} registro${detalle.cantidad_registros !== 1 ? 's' : ''}
+                                </span>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 1.2rem; font-weight: 700; color: var(--success);">
+                                    ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(detalle.total_hoy)}
+                                </div>
+                                <span style="font-size: 0.8rem; color: var(--text-muted);">Tarifa: ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(detalle.valor_tarifa || 0)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                detalleEl.innerHTML = detalleHTML;
+            }
+        } else {
+            const containerEl = document.getElementById('gananciasContainer');
+            if (containerEl) containerEl.style.display = 'none';
         }
 
     } catch (err) {
@@ -145,6 +180,15 @@ async function renderActivityTable() {
             const badgeClass = isFinished ? 'badge-danger' : 'badge-success';
             // Formato de estado para mostrar
             const statusLabel = isFinished ? 'Finalizado' : 'En Curso';
+            
+            // Validar y formatear costo total
+            const costoNumerico = Number(reg.valor_calculado) || 0;
+            const costoValido = (!isNaN(costoNumerico) && costoNumerico >= 0) ? costoNumerico : 0;
+            const costoFormato = new Intl.NumberFormat('es-CO', { 
+                style: 'currency', 
+                currency: 'COP', 
+                maximumFractionDigits: 0 
+            }).format(costoValido);
 
             return `
                 <tr>
@@ -155,7 +199,7 @@ async function renderActivityTable() {
                             ${statusLabel}
                         </span>
                     </td>
-                    <td>-</td>
+                    <td style="font-weight: 600; color: var(--success);">${costoFormato}</td>
                 </tr>
             `;
         }).join('');

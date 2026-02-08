@@ -13,25 +13,86 @@ export const getDashboardStats = async (req, res) => {
 
     if (errorOcupacion) throw errorOcupacion;
 
-    // 2. Ingresos de hoy
-    const today = new Date().toISOString().split("T")[0];
+    // 2. Ingresos/Ganancias de hoy (Ajustado a Zona Horaria Colombia GMT-5)
+    // Usamos Intl para obtener la fecha correcta en Colombia independientemente de la hora del servidor
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Bogota',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
+    const today = formatter.format(new Date());
+    
+    // Rango del día completo en Colombia
+    const startOfDay = `${today}T00:00:00-05:00`;
+    const endOfDay = `${today}T23:59:59-05:00`;
+
     const { data: ingresosData, error: errorIngresos } = await supabase
       .from("registros")
-      .select("valor_calculado")
+      .select(`
+        id_registro,
+        valor_calculado, 
+        tarifa_id,
+        tarifas!left(id_tarifa, nombre, tipo_cobro, valor)
+      `)
       .eq("estado", "FINALIZADO")
-      .gte("salida", `${today}T00:00:00`)
-      .lte("salida", `${today}T23:59:59`);
+      .gte("salida", startOfDay)
+      .lte("salida", endOfDay);
 
     if (errorIngresos) throw errorIngresos;
     
-    const ingresosHoy = ingresosData.reduce((sum, reg) => sum + (reg.valor_calculado || 0), 0);
+    // Filtrar valores negativos históricos en la suma para evitar montos < 0 en el dashboard
+    const gananciasTotal = (ingresosData || []).reduce((sum, reg) => {
+        const valor = Number(reg.valor_calculado) || 0;
+        return sum + (valor > 0 ? valor : 0);
+    }, 0);
+
+    // 2.1 Obtener detalle de ganancias por tarifa (para desglose visual)
+    const { data: detalleData, error: errorDetalle } = await supabase
+        .from("registros")
+        .select(`
+            valor_calculado,
+            tarifas (
+                nombre,
+                tipo_cobro,
+                valor
+            )
+        `)
+        .eq("estado", "FINALIZADO")
+        .gte("salida", startOfDay)
+        .lte("salida", endOfDay)
+        .not("tarifa_id", "is", null);
+
+    let gananciasData = [];
+    if (!errorDetalle && detalleData) {
+        // Agrupar por nombre de tarifa
+        const agrupado = {};
+        detalleData.forEach(reg => {
+            const tarifaNombre = reg.tarifas?.nombre || 'Tarifa Eliminada';
+            if (!agrupado[tarifaNombre]) {
+                agrupado[tarifaNombre] = {
+                    nombre: tarifaNombre,
+                    tipo_cobro: reg.tarifas?.tipo_cobro || 'N/A',
+                    valor_tarifa: reg.tarifas?.valor || 0,
+                    cantidad_registros: 0,
+                    total_hoy: 0
+                };
+            }
+            const valor = Number(reg.valor_calculado) || 0;
+            if (valor > 0) {
+                agrupado[tarifaNombre].total_hoy += valor;
+                agrupado[tarifaNombre].cantidad_registros++;
+            }
+        });
+        gananciasData = Object.values(agrupado).sort((a, b) => b.total_hoy - a.total_hoy);
+    }
 
     // 3. Vehículos hoy
     const { count: vehiculosHoy, error: errorVehiculos } = await supabase
       .from("registros")
       .select("*", { count: "exact", head: true })
-      .gte("entrada", `${today}T00:00:00`)
-      .lte("entrada", `${today}T23:59:59`);
+      .gte("entrada", startOfDay)
+      .lte("entrada", endOfDay);
 
     if (errorVehiculos) throw errorVehiculos;
 
@@ -42,7 +103,8 @@ export const getDashboardStats = async (req, res) => {
     res.json({
       ocupacionActual: ocupacionActual || 0,
       espaciosDisponibles: espaciosDisponibles > 0 ? espaciosDisponibles : 0,
-      ingresosHoy,
+      gananciasHoy: gananciasTotal, // Renombrado para coincidir con frontend
+      gananciasDetalle: gananciasData,
       vehiculosHoy: vehiculosHoy || 0
     });
 
@@ -66,21 +128,30 @@ export const getRegistrosHistory = async (req, res) => {
         salida,
         estado,
         valor_calculado,
-        tipos_vehiculo(nombre)
+        total_minutos,
+        tipos_vehiculo!left(id_vehiculo, nombre),
+        tarifas!left(nombre, tipo_cobro)
       `)
       .order("entrada", { ascending: false })
       .limit(10);
 
     if (error) throw error;
     
-    // Mapear respuesta para mantener compatibilidad con frontend si usa nombres viejos
-    // O mejor, el frontend debería adaptarse. Por ahora mapearé para asegurar.
-    const mappedData = data.map(reg => ({
-        ...reg,
-        hora_entrada: reg.entrada,
-        hora_salida: reg.salida,
-        costo_total: reg.valor_calculado
-    }));
+    // Mapear respuesta con información de tarifa incluida y validar números
+    const mappedData = data.map(reg => {
+        const valorCalculado = Number(reg.valor_calculado) || 0;
+        const valorValido = (!isNaN(valorCalculado) && valorCalculado >= 0) ? valorCalculado : 0;
+        
+        return {
+            ...reg,
+            hora_entrada: reg.entrada,
+            hora_salida: reg.salida,
+            costo_total: valorValido,
+            valor_calculado: valorValido,
+            tipo_vehiculo: reg.tipos_vehiculo?.nombre || 'Desconocido',
+            tarifa_nombre: reg.tarifas?.nombre || 'Sin tarifa'
+        };
+    });
 
     res.json(mappedData);
   } catch (err) {
@@ -295,6 +366,55 @@ export const toggleUserStatus = async (req, res) => {
 
   } catch (err) {
     console.error("Error toggling user status:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * GET all registros finalizados de hoy (DEBUG)
+ * Muestra los detalles completos para verificar cálculos
+ */
+export const getRegistrosDebug = async (req, res) => {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Bogota',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
+    const today = formatter.format(new Date());
+    
+    const startOfDay = `${today}T00:00:00-05:00`;
+    const endOfDay = `${today}T23:59:59-05:00`;
+
+    const { data, error } = await supabase
+      .from("registros")
+      .select(`
+        id_registro,
+        placa,
+        entrada,
+        salida,
+        total_minutos,
+        valor_calculado,
+        tarifa_id,
+        tipos_vehiculo!inner(nombre),
+        tarifas!left(id_tarifa, nombre, tipo_cobro, valor)
+      `)
+      .eq("estado", "FINALIZADO")
+      .gte("salida", startOfDay)
+      .lte("salida", endOfDay)
+      .order("salida", { ascending: false });
+
+    if (error) throw error;
+
+    res.json({
+      fecha: today,
+      total_registros: data?.length || 0,
+      registros: data || []
+    });
+
+  } catch (err) {
+    console.error("Error getting debug data:", err);
     res.status(500).json({ error: err.message });
   }
 };
