@@ -40,12 +40,10 @@ app.use("/api/admin", adminRoutes);
 // ========== INICIALIZACIÓN DEL SISTEMA ==========
 
 const initializeSystem = async () => {
-  // console.log("Starting system initialization...");
   try {
     // 1. Roles
     const { data: roles } = await supabase.from("roles").select("*");
     if (!roles || roles.length === 0) {
-      // console.log("Creating default roles...");
       await supabase.from("roles").insert([
         { id_roles: 1, nombre: "ADMINISTRADOR" },
         { id_roles: 2, nombre: "OPERARIO" }
@@ -59,7 +57,7 @@ const initializeSystem = async () => {
     // 3. Tarifas Check
     const { count: tarifasCount } = await supabase.from("tarifas").select("*", { count: "exact", head: true }).eq("activo", true);
     if (tarifasCount === 0) {
-        // console.warn("WARNING: No active tariffs.");
+        // Warning handled silently
     }
 
     // 4. Espacios Check - Se crean manualmente con script/seed-espacios.js
@@ -72,7 +70,6 @@ const initializeSystem = async () => {
     // 5. Admin Check
     const { data: admins } = await supabase.from("usuarios").select("id_usuario").eq("rol_id", 1).limit(1);
     if (!admins || admins.length === 0) {
-        // console.log("Creating default admin...");
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash("admin123", salt);
         const adminId = crypto.randomUUID();

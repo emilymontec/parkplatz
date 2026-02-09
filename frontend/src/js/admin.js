@@ -1,7 +1,6 @@
 import { getAuthHeaders, navigateTo, clearAuthSession, showAlert } from './routes.js';
 
 export default function initAdmin() {
-    console.log('Admin Dashboard Ready');
 
     // 1. Mostrar info de usuario
     const user = JSON.parse(localStorage.getItem('user') || '{}');

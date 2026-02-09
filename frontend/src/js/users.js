@@ -62,7 +62,6 @@ const loadRoles = async () => {
 
 const loadUsers = async () => {
     try {
-        console.log("Cargando usuarios...");
         const res = await fetch('/api/admin/usuarios', {
             headers: getAuthHeaders()
         });
@@ -72,7 +71,6 @@ const loadUsers = async () => {
         }
 
         const users = await res.json();
-        console.log("Usuarios cargados:", users);
         renderTable(users);
     } catch (err) {
         console.error("Error en loadUsers:", err);

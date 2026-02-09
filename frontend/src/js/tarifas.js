@@ -5,8 +5,6 @@ let tiposVehiculo = [];
 let currentTarifaId = null;
 
 export default function initTarifas() {
-    console.log('Tarifas Management Ready');
-    
     setupUser();
     loadTiposVehiculo(); // Cargar tipos antes de tarifas para tenerlos disponibles
     loadTarifas();

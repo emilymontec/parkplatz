@@ -48,7 +48,6 @@ export const formatLocalDate = (date) => {
     // No usar timeZone en format() - ya está convertida por toZonedTime()
     const formatted = format(zonedDate, 'dd/MM/yyyy HH:mm:ss');
     
-    console.log(`[formatLocalDate] Input: ${date} -> Zoned: ${zonedDate.toString()} -> Output: ${formatted}`);
     return formatted;
   } catch (error) {
     console.error('[formatLocalDate] Error:', error, 'Input:', date);

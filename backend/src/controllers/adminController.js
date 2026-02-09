@@ -264,7 +264,6 @@ export const createUser = async (req, res) => {
 
     // 1. Intentar crear en Supabase Auth (opcional - si falla, continuamos)
     try {
-        console.log(`[CreateUser] Intentando crear usuario en Auth: ${email}`);
         const { data: authData, error: authError } = await supabase.auth.admin.createUser({
           email,
           password,
@@ -278,7 +277,6 @@ export const createUser = async (req, res) => {
         }
         authUserId = authData.user.id;
         authUserCreated = true;
-        console.log(`[CreateUser] Usuario creado en Auth con ID: ${authUserId}`);
     } catch (authErr) {
         // Si el error es por falta de permisos o RLS, solo creamos en BD local
         if (
@@ -301,7 +299,6 @@ export const createUser = async (req, res) => {
     const password_hash = await bcrypt.hash(password, salt);
 
     // 2. Crear usuario en tabla local 'usuarios' (sin especificar id_usuario - se genera automáticamente)
-    console.log(`[CreateUser] Insertando en BD local`);
     
     const insertData = {
       username,
@@ -331,15 +328,12 @@ export const createUser = async (req, res) => {
       if (authUserCreated && authUserId) {
         try {
           await supabase.auth.admin.deleteUser(authUserId);
-          console.log(`[CreateUser] Usuario borrado de Auth por error en BD`);
         } catch (delErr) {
           console.warn(`[CreateUser] No se pudo borrar usuario de Auth:`, delErr.message);
         }
       }
       throw dbError;
     }
-
-    console.log(`[CreateUser] Usuario creado exitosamente: ${username} (ID: ${data.id_usuario})`);
     
     res.status(201).json({ 
         message: authUserCreated ? "Usuario creado exitosamente" : "Usuario creado (Auth deshabilitado)", 
@@ -375,7 +369,6 @@ export const updateUser = async (req, res) => {
   }
 
   try {
-    console.log(`[UpdateUser] Actualizando usuario ID: ${id}`);
     
     let updateData = {};
     
@@ -391,11 +384,9 @@ export const updateUser = async (req, res) => {
         }
         const salt = await bcrypt.genSalt(10);
         updateData.password_hash = await bcrypt.hash(password, salt);
-        console.log(`[UpdateUser] Contraseña incluida en actualización`);
     }
 
     // 1. Actualizar tabla local
-    console.log(`[UpdateUser] Datos a actualizar:`, { ...updateData, password_hash: updateData.password_hash ? '***' : undefined });
     
     const { data: updatedUser, error: dbError } = await supabase
       .from("usuarios")
@@ -414,12 +405,9 @@ export const updateUser = async (req, res) => {
         return res.status(404).json({ error: "Usuario no encontrado" });
     }
 
-    console.log("[UpdateUser] Usuario actualizado en BD local exitosamente");
-
     // 2. Si hay password y el ID es un UUID válido, actualizar en Auth
     if (password && password.trim() !== "" && isUUID(id)) {
       try {
-          console.log(`[UpdateUser] Actualizando password en Auth`);
           const { error: authError } = await supabase.auth.admin.updateUserById(
             id,
             { password: password }
@@ -427,8 +415,6 @@ export const updateUser = async (req, res) => {
           if (authError) {
               console.warn("[UpdateUser] Advertencia al actualizar Auth:", authError.message);
               // No es crítico si falla Auth, el login local funciona con bcrypt
-          } else {
-              console.log(`[UpdateUser] Password actualizado en Auth`);
           }
       } catch (authErr) {
            console.warn("[UpdateUser] Excepción al actualizar Auth:", authErr.message);
