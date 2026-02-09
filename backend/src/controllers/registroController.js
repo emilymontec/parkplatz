@@ -358,8 +358,6 @@ export const registerEntry = async (req, res) => {
       espacios: { codigo: espacioCodigo || 'Sin asignar' }
     };
 
-    console.log('[registerEntry] Final response:', JSON.stringify(responseData, null, 2));
-
     res.status(201).json({ 
       message: "Entrada registrada",
       data: responseData
@@ -520,15 +518,11 @@ export const registerExit = async (req, res) => {
         .eq('id_espacio', registro.espacio_id);
     }
     
-    console.log('[registerExit] Response data:', JSON.stringify(data, null, 2));
-    
     const responseData = {
       ...data,
       entrada_formateada: formatLocalDate(data.entrada),
       salida_formateada: formatLocalDate(data.salida)
     };
-    
-    console.log('[registerExit] Final response:', JSON.stringify(responseData, null, 2));
     
     res.json({ 
       message: "Salida registrada",

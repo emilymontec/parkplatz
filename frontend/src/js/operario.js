@@ -3,7 +3,6 @@ import { getAuthHeaders, navigateTo, clearAuthSession, showConfirm, showAlert } 
 let currentVehicles = []; // Almacen local para filtrado
 
 export default function initOperator() {
-    console.log('Operator Dashboard Ready');
 
     // 1. Mostrar info de usuario
     const user = JSON.parse(localStorage.getItem('user') || '{}');
