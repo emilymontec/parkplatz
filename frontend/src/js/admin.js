@@ -19,6 +19,58 @@ export default function initAdmin() {
     loadDashboardData();
     renderActivityTable();
     setupModalListeners();
+    setupReportButton();
+}
+
+function setupReportButton() {
+    const btn = document.getElementById('btnDownloadReport');
+    if (!btn) return;
+
+    btn.addEventListener('click', async () => {
+        try {
+            btn.disabled = true;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando...';
+
+            const res = await fetch('/api/admin/reporte', {
+                method: 'GET',
+                headers: getAuthHeaders()
+            });
+
+            if (res.status === 401) {
+                clearAuthSession();
+                navigateTo('/login');
+                return;
+            }
+
+            if (!res.ok) throw new Error('Error al generar reporte');
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            
+            const contentDisposition = res.headers.get('Content-Disposition');
+            let filename = 'reporte.csv';
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename="?([^"]+)"?/);
+                if (match && match[1]) filename = match[1];
+            }
+            
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+
+        } catch (error) {
+            console.error(error);
+            showAlert('Error al descargar el reporte', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-file-export"></i> Descargar Reporte';
+        }
+    });
 }
 
 function setupModalListeners() {

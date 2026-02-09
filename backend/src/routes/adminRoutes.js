@@ -9,7 +9,8 @@ import {
   toggleUserStatus,
   getRegistrosDebug,
   getEspacios,
-  resetEspacios
+  resetEspacios,
+  getMonthlyReport
 } from "../controllers/adminController.js";
 import {
   getTarifas,
@@ -28,6 +29,9 @@ router.use(authorize("ADMINISTRADOR"));
 
 // Dashboard estadísticas
 router.get("/stats", getDashboardStats);
+
+// Reporte Mensual
+router.get("/reporte", getMonthlyReport);
 
 // DEBUG: Ver datos completos de registros de hoy
 router.get("/debug/registros-hoy", getRegistrosDebug);

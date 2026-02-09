@@ -2,6 +2,10 @@ import { supabase } from "../config/db.js";
 import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
 import { getTodayStartUTC, getTodayEndUTC, formatLocalDate } from "../utils/dateUtils.js";
+import { startOfMonth, endOfMonth, parseISO, format } from 'date-fns';
+import { fromZonedTime, toZonedTime } from 'date-fns-tz';
+
+const TIMEZONE = 'America/Bogota';
 
 // Helper para validar UUID
 const isUUID = (str) => {
@@ -101,103 +105,54 @@ export const getDashboardStats = async (req, res) => {
 
     res.json({
       ocupacionActual: ocupacionActual || 0,
-      espaciosDisponibles: espaciosDisponibles > 0 ? espaciosDisponibles : 0,
-      gananciasHoy: gananciasTotal, // Renombrado para coincidir con frontend
-      gananciasDetalle: gananciasData,
-      vehiculosHoy: vehiculosHoy || 0
+      gananciasHoy: gananciasTotal, // Ahora sumamos con filtro > 0
+      vehiculosHoy: vehiculosHoy || 0,
+      espaciosDisponibles: espaciosDisponibles >= 0 ? espaciosDisponibles : 0,
+      gananciasDetalle: gananciasData
     });
 
   } catch (err) {
-    console.error("Error getting stats:", err);
+    console.error("Error getting dashboard stats:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
 /**
- * Obtener historial de registros reciente
+ * Obtener historial de registros (paginado)
  */
 export const getRegistrosHistory = async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { page = 1, limit = 10, search = "" } = req.query;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = supabase
       .from("registros")
       .select(`
-        id_registro,
-        placa,
-        entrada,
-        salida,
-        estado,
-        valor_calculado,
-        total_minutos,
-        tipos_vehiculo!left(id_vehiculo, nombre),
-        tarifas!left(nombre, tipo_cobro)
-      `)
+        *,
+        tipos_vehiculo(nombre),
+        tarifas(nombre, valor)
+      `, { count: "exact" })
       .order("entrada", { ascending: false })
-      .limit(10);
+      .range(from, to);
+
+    if (search) {
+      query = query.ilike("placa", `%${search}%`);
+    }
+
+    const { data, error, count } = await query;
 
     if (error) throw error;
-    
-    // Mapear respuesta con información de tarifa incluida y validar números
-    const mappedData = data.map(reg => {
-        const valorCalculado = Number(reg.valor_calculado) || 0;
-        const valorValido = (!isNaN(valorCalculado) && valorCalculado >= 0) ? valorCalculado : 0;
-        
-        return {
-            ...reg,
-            hora_entrada: reg.entrada,
-            hora_entrada_formateada: formatLocalDate(reg.entrada),
-            hora_salida: reg.salida,
-            hora_salida_formateada: reg.salida ? formatLocalDate(reg.salida) : null,
-            costo_total: valorValido,
-            valor_calculado: valorValido,
-            tipo_vehiculo: reg.tipos_vehiculo?.nombre || 'Desconocido',
-            tarifa_nombre: reg.tarifas?.nombre || 'Sin tarifa'
-        };
-    });
 
-    res.json(mappedData);
+    res.json({
+      data,
+      count,
+      page: Number(page),
+      totalPages: Math.ceil(count / limit)
+    });
   } catch (err) {
     console.error("Error getting history:", err);
     res.status(500).json({ error: err.message });
-  }
-};
-
-/**
- * Obtener todos los roles
- */
-export const getRoles = async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from("roles")
-      .select("*")
-      .order("id_roles", { ascending: true });
-
-    if (error) throw error;
-    res.json(data);
-  } catch (err) {
-    console.error("Error getting roles:", err);
-    res.status(500).json({ error: err.message });
-  }
-};
-
-/**
- * Obtener listado de tipos de vehículo
- */
-export const getTiposVehiculo = async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from("tipos_vehiculo")
-      .select("*")
-      .order("nombre", { ascending: true });
-
-    if (error) throw error;
-
-    res.json(data);
-  } catch (err) {
-    console.error("Error getting vehicle types:", err);
-    res.status(500).json({
-      error: err.message,
-      code: "DB_ERROR"
-    });
   }
 };
 
@@ -206,154 +161,82 @@ export const getTiposVehiculo = async (req, res) => {
  */
 export const getUsers = async (req, res) => {
   try {
-    // Importante: traer rol_id para el frontend edit modal
     const { data, error } = await supabase
       .from("usuarios")
       .select(`
         id_usuario,
         username,
-        email,
         nombres_apellidos,
-        activo,
         rol_id,
-        roles (
-          nombre
-        )
+        activo,
+        roles (nombre)
       `)
-      .order("fecha_creacion", { ascending: false });
+      .order("nombres_apellidos");
 
     if (error) throw error;
-
-    // Mapear para facilitar uso en frontend
-    const users = data.map(u => ({
-      ...u,
-      rol: u.roles?.nombre || 'Sin Rol'
-    }));
-
-    res.json(users);
+    res.json(data);
   } catch (err) {
-    console.error("Error getting users:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
 /**
- * Crear usuario (Sincronizado con Supabase Auth)
+ * Obtener roles
+ */
+export const getRoles = async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from("roles")
+            .select("*")
+            .order("id_rol");
+        
+        if (error) throw error;
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+/**
+ * Crear usuario
  */
 export const createUser = async (req, res) => {
-  const { username, email, password, nombres_apellidos, rol_id } = req.body;
-
-  if (!email || !password || !username || !rol_id) {
-    return res.status(400).json({ error: "Faltan campos requeridos: email, password, username, rol_id" });
-  }
-
-  // Validación de formato de email
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return res.status(400).json({ error: "Formato de email inválido" });
-  }
-
-  // Validación de longitud de contraseña
-  if (password.length < 6) {
-    return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
-  }
-
   try {
-    let authUserId = null;
-    let authUserCreated = false;
+    const { username, password, nombres_apellidos, rol_id } = req.body;
 
-    // 1. Intentar crear en Supabase Auth (opcional - si falla, continuamos)
-    try {
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-          email,
-          password,
-          email_confirm: true,
-          user_metadata: { username, nombres_apellidos }
-        });
-
-        if (authError) {
-          console.error(`[CreateUser] Error Auth:`, authError);
-          throw authError;
-        }
-        authUserId = authData.user.id;
-        authUserCreated = true;
-    } catch (authErr) {
-        // Si el error es por falta de permisos o RLS, solo creamos en BD local
-        if (
-          authErr.message?.includes("Not enough permissions") ||
-          authErr.message?.includes("row-level security") ||
-          authErr.code === '42501' ||
-          authErr.status === 403 ||
-          authErr.message?.includes("not allowed")
-        ) {
-            console.warn(`[CreateUser] Auth bloqueado por RLS/permisos. Creando usuario SOLO en BD local.`);
-        } else if (authErr.message?.includes("User already exists")) {
-            console.warn(`[CreateUser] Usuario ya existe en Auth. Continuando con creación en BD local.`);
-        } else {
-            throw authErr;
-        }
+    // Validar que el rol existe
+    const { data: roleData, error: roleError } = await supabase
+        .from('roles')
+        .select('id_rol')
+        .eq('id_rol', rol_id)
+        .single();
+    
+    if (roleError || !roleData) {
+        return res.status(400).json({ error: "Rol inválido" });
     }
 
-    // Generar hash de contraseña para login local
+    // Hash password
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
-    // 2. Crear usuario en tabla local 'usuarios' (sin especificar id_usuario - se genera automáticamente)
-    
-    const insertData = {
-      username,
-      email,
-      nombres_apellidos,
-      rol_id,
-      activo: true,
-      password_hash
-    };
-    
-    // Si se creó en Auth, guardar el UUID
-    if (authUserId) {
-      insertData.id_usuario = authUserId;
-    }
-    // Si no, dejar que Supabase genere el ID automáticamente
-
-    const { data, error: dbError } = await supabase
+    const { data, error } = await supabase
       .from("usuarios")
-      .insert([insertData])
-      .select()
-      .single();
+      .insert([{
+        username,
+        password_hash,
+        nombres_apellidos,
+        rol_id,
+        activo: true
+      }])
+      .select();
 
-    if (dbError) {
-      console.error("[CreateUser] Error en BD local:", dbError);
-      
-      // Si se creó en Auth pero falló en BD, intentar limpiar Auth
-      if (authUserCreated && authUserId) {
-        try {
-          await supabase.auth.admin.deleteUser(authUserId);
-        } catch (delErr) {
-          console.warn(`[CreateUser] No se pudo borrar usuario de Auth:`, delErr.message);
-        }
-      }
-      throw dbError;
-    }
-    
-    res.status(201).json({ 
-        message: authUserCreated ? "Usuario creado exitosamente" : "Usuario creado (Auth deshabilitado)", 
-        user: { 
-          id_usuario: data.id_usuario,
-          id: data.id_usuario,
-          email, 
-          username,
-          nombres_apellidos,
-          rol_id,
-          activo: true
-        }
-    });
-
+    if (error) throw error;
+    res.status(201).json(data[0]);
   } catch (err) {
-    console.error("[CreateUser] Error final:", err);
-    res.status(500).json({ 
-      error: err.message,
-      hint: "Si el error es de permisos, verifica que SUPABASE_SERVICE_ROLE_KEY esté configurada en .env"
-    });
+    if (err.code === '23505') { // Unique violation
+        return res.status(400).json({ error: "El nombre de usuario ya existe" });
+    }
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -361,261 +244,236 @@ export const createUser = async (req, res) => {
  * Actualizar usuario
  */
 export const updateUser = async (req, res) => {
-  const { id } = req.params;
-  const { nombres_apellidos, username, email, rol_id, password } = req.body;
-
-  if (!id) {
-    return res.status(400).json({ error: "ID de usuario requerido" });
-  }
-
   try {
-    
-    let updateData = {};
-    
-    if (nombres_apellidos) updateData.nombres_apellidos = nombres_apellidos;
-    if (username) updateData.username = username;
-    if (email) updateData.email = email;
-    if (rol_id) updateData.rol_id = rol_id;
+    const { id } = req.params;
+    const { username, password, nombres_apellidos, rol_id } = req.body;
 
-    // Si hay password, actualizar hash en BD local
-    if (password && password.trim() !== "") {
-        if (password.length < 6) {
-            return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
+    // Validar rol si se envía
+    if (rol_id) {
+        const { data: roleData, error: roleError } = await supabase
+            .from('roles')
+            .select('id_rol')
+            .eq('id_rol', rol_id)
+            .single();
+        if (roleError || !roleData) {
+            return res.status(400).json({ error: "Rol inválido" });
         }
-        const salt = await bcrypt.genSalt(10);
-        updateData.password_hash = await bcrypt.hash(password, salt);
     }
 
-    // 1. Actualizar tabla local
-    
-    const { data: updatedUser, error: dbError } = await supabase
-      .from("usuarios")
-      .update(updateData)
-      .eq("id_usuario", id)
-      .select()
-      .single();
+    const updates = {
+      username,
+      nombres_apellidos,
+      rol_id
+    };
 
-    if (dbError) {
-      console.error("[UpdateUser] Error en BD:", dbError);
-      throw dbError;
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      updates.password_hash = await bcrypt.hash(password, salt);
     }
-    
-    if (!updatedUser) {
-        console.warn(`[UpdateUser] No se encontró usuario con ID ${id}`);
-        return res.status(404).json({ error: "Usuario no encontrado" });
-    }
-
-    // 2. Si hay password y el ID es un UUID válido, actualizar en Auth
-    if (password && password.trim() !== "" && isUUID(id)) {
-      try {
-          const { error: authError } = await supabase.auth.admin.updateUserById(
-            id,
-            { password: password }
-          );
-          if (authError) {
-              console.warn("[UpdateUser] Advertencia al actualizar Auth:", authError.message);
-              // No es crítico si falla Auth, el login local funciona con bcrypt
-          }
-      } catch (authErr) {
-           console.warn("[UpdateUser] Excepción al actualizar Auth:", authErr.message);
-      }
-    }
-    
-    // 3. Actualizar datos en Auth si no es UUID
-    if (isUUID(id) && (nombres_apellidos || username)) {
-      try {
-          const metadata = {};
-          if (nombres_apellidos) metadata.nombres_apellidos = nombres_apellidos;
-          if (username) metadata.username = username;
-          
-          const { error: metaError } = await supabase.auth.admin.updateUserById(
-            id,
-            { user_metadata: metadata }
-          );
-          if (metaError) {
-              console.warn("[UpdateUser] Advertencia al actualizar metadata Auth:", metaError.message);
-          }
-      } catch (metaErr) {
-          console.warn("[UpdateUser] Excepción al actualizar metadata Auth:", metaErr.message);
-      }
-    }
-
-    res.json({ 
-      message: "Usuario actualizado correctamente",
-      user: updatedUser
-    });
-
-  } catch (err) {
-    console.error("[UpdateUser] Error final:", err);
-    res.status(500).json({ 
-      error: err.message,
-      hint: "Verifica que el usuario exista y que tengas permisos suficientes"
-    });
-  }
-};
-
-/**
- * Cambiar estado (Activar/Desactivar)
- */
-export const toggleUserStatus = async (req, res) => {
-  const { id } = req.params;
-  const { activo } = req.body; // boolean
-
-  try {
-    // 1. Actualizar BD local
-    const { error: dbError } = await supabase
-      .from("usuarios")
-      .update({ activo })
-      .eq("id_usuario", id);
-
-    if (dbError) throw dbError;
-
-    // 2. Bloquear/Desbloquear en Auth (ban)
-    if (activo === false) {
-       await supabase.auth.admin.updateUserById(id, { ban_duration: "876000h" }); // ~100 años
-    } else {
-       await supabase.auth.admin.updateUserById(id, { ban_duration: "0" }); // remove ban
-    }
-
-    res.json({ message: `Usuario ${activo ? 'activado' : 'desactivado'} correctamente` });
-
-  } catch (err) {
-    console.error("Error toggling user status:", err);
-    res.status(500).json({ error: err.message });
-  }
-};
-
-/**
- * GET all registros finalizados de hoy (DEBUG)
- * Muestra los detalles completos para verificar cálculos
- */
-export const getRegistrosDebug = async (req, res) => {
-  try {
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'America/Bogota',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    });
-    const today = formatter.format(new Date());
-    
-    const startOfDay = `${today}T00:00:00-05:00`;
-    const endOfDay = `${today}T23:59:59-05:00`;
 
     const { data, error } = await supabase
-      .from("registros")
-      .select(`
-        id_registro,
-        placa,
-        entrada,
-        salida,
-        total_minutos,
-        valor_calculado,
-        tarifa_id,
-        tipos_vehiculo!inner(nombre),
-        tarifas!left(id_tarifa, nombre, tipo_cobro, valor)
-      `)
-      .eq("estado", "FINALIZADO")
-      .gte("salida", startOfDay)
-      .lte("salida", endOfDay)
-      .order("salida", { ascending: false });
+      .from("usuarios")
+      .update(updates)
+      .eq("id_usuario", id)
+      .select();
 
     if (error) throw error;
-
-    res.json({
-      fecha: today,
-      total_registros: data?.length || 0,
-      registros: data || []
-    });
-
+    res.json(data[0]);
   } catch (err) {
-    console.error("Error getting debug data:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
 /**
- * GET Espacios - Listar todos los espacios con su estado (Disponible/Ocupado)
- * Ruta protegida: Solo ADMINISTRADOR
+ * Activar/Desactivar usuario
+ */
+export const toggleUserStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Obtener estado actual
+    const { data: user } = await supabase
+      .from("usuarios")
+      .select("activo")
+      .eq("id_usuario", id)
+      .single();
+
+    const { data, error } = await supabase
+      .from("usuarios")
+      .update({ activo: !user.activo })
+      .eq("id_usuario", id)
+      .select();
+
+    if (error) throw error;
+    res.json(data[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * DEBUG: Obtener todos los registros de hoy sin filtros de estado
+ */
+export const getRegistrosDebug = async (req, res) => {
+    try {
+        const startOfDay = getTodayStartUTC();
+        const endOfDay = getTodayEndUTC();
+
+        console.log('DEBUG QUERY RANGE:', { startOfDay, endOfDay });
+
+        const { data, error } = await supabase
+            .from("registros")
+            .select(`
+                *,
+                tarifas (nombre)
+            `)
+            .gte("entrada", startOfDay)
+            .lte("entrada", endOfDay);
+
+        if (error) throw error;
+        res.json(data);
+    } catch (err) {
+        console.error("Error debug:", err);
+        res.status(500).json({ error: err.message });
+    }
+};
+
+/**
+ * Gestión de Espacios (Parking Spaces)
  */
 export const getEspacios = async (req, res) => {
-  try {
-    const { data: espacios, error } = await supabase
-      .from("espacios")
-      .select("id_espacio, codigo, espacio_id, disponible")
-      .order("espacio_id", { ascending: true })
-      .order("id_espacio", { ascending: true });
+    try {
+        const { data, error } = await supabase
+            .from("espacios")
+            .select(`
+                *,
+                tipos_vehiculo (nombre)
+            `)
+            .order("id_espacio");
 
-    if (error) throw error;
+        if (error) throw error;
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
 
-    // Agrupar por tipo de vehículo usando espacio_id (1 para autos, 3 para motos)
-    const autos = espacios.filter(e => e.espacio_id === 1);
-    const motos = espacios.filter(e => e.espacio_id === 3);
+export const resetEspacios = async (req, res) => {
+    try {
+        // Pone todos los espacios en disponible=true
+        const { error } = await supabase
+            .from("espacios")
+            .update({ disponible: true })
+            .neq("id_espacio", 0); // Actualiza todos
 
-    const autosDisponibles = autos.filter(e => e.disponible).length;
-    const motosDisponibles = motos.filter(e => e.disponible).length;
-
-    res.json({
-      resumen: {
-        autos: {
-          total: autos.length,
-          disponibles: autosDisponibles,
-          ocupados: autos.length - autosDisponibles
-        },
-        motos: {
-          total: motos.length,
-          disponibles: motosDisponibles,
-          ocupados: motos.length - motosDisponibles
-        },
-        total: {
-          total: espacios.length,
-          disponibles: autosDisponibles + motosDisponibles,
-          ocupados: (autos.length + motos.length) - (autosDisponibles + motosDisponibles)
-        }
-      },
-      espacios: {
-        autos: autos
-          .sort((a, b) => a.id_espacio - b.id_espacio)
-          .map(e => ({
-            ...e,
-            estado: e.disponible ? "DISPONIBLE" : "OCUPADO"
-          })),
-        motos: motos
-          .sort((a, b) => a.id_espacio - b.id_espacio)
-          .map(e => ({
-            ...e,
-            estado: e.disponible ? "DISPONIBLE" : "OCUPADO"
-          }))
-      }
-    });
-
-  } catch (err) {
-    console.error("Error getting espacios:", err);
-    res.status(500).json({ error: err.message });
-  }
+        if (error) throw error;
+        res.json({ message: "Espacios reseteados correctamente" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 };
 
 /**
- * Reset Espacios - Poner todos los espacios como DISPONIBLES
- * Ruta protegida: Solo ADMINISTRADOR
- * ADVERTENCIA: Uso solo para mantenimiento/limpieza
+ * Generar Reporte Mensual (CSV)
  */
-export const resetEspacios = async (req, res) => {
+export const getMonthlyReport = async (req, res) => {
   try {
-    const { data: updated, error } = await supabase
-      .from("espacios")
-      .update({ disponible: true })
-      .select("id_espacio, codigo, disponible");
+    const { month } = req.query; // YYYY-MM
+    let startDate, endDate;
+    let reportMonth = month;
+
+    if (month) {
+        const date = parseISO(month + '-01'); // e.g. 2023-10-01
+        
+        // Inicio del mes en zona horaria
+        const startLocal = startOfMonth(toZonedTime(date, TIMEZONE));
+        startDate = fromZonedTime(startLocal, TIMEZONE).toISOString();
+
+        // Fin del mes en zona horaria
+        const endLocal = endOfMonth(toZonedTime(date, TIMEZONE));
+        endLocal.setHours(23, 59, 59, 999);
+        endDate = fromZonedTime(endLocal, TIMEZONE).toISOString();
+    } else {
+        // Default: Mes actual
+        const now = new Date();
+        const zonedNow = toZonedTime(now, TIMEZONE);
+        
+        reportMonth = format(zonedNow, 'yyyy-MM');
+        
+        const startLocal = startOfMonth(zonedNow);
+        startDate = fromZonedTime(startLocal, TIMEZONE).toISOString();
+
+        const endLocal = endOfMonth(zonedNow);
+        endLocal.setHours(23, 59, 59, 999);
+        endDate = fromZonedTime(endLocal, TIMEZONE).toISOString();
+    }
+
+    // Query Registros
+    const { data, error } = await supabase
+        .from("registros")
+        .select(`
+            fecha_entrada:entrada,
+            fecha_salida:salida,
+            placa,
+            vehiculo_id,
+            tipos_vehiculo(nombre),
+            tarifas(nombre, valor),
+            valor_calculado,
+            estado,
+            usuario_entrada,
+            usuario_salida
+        `)
+        .gte('entrada', startDate)
+        .lte('entrada', endDate)
+        .order('entrada', { ascending: true });
 
     if (error) throw error;
 
-    res.json({
-      message: `${updated.length} espacios reseteados a DISPONIBLE`,
-      total: updated.length
+    // Helper para CSV
+    const toCSVField = (field) => {
+        if (field === null || field === undefined) return '';
+        const stringField = String(field);
+        if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+            return `"${stringField.replace(/"/g, '""')}"`;
+        }
+        return stringField;
+    };
+
+    const headers = [
+        'Fecha Entrada', 
+        'Fecha Salida', 
+        'Placa', 
+        'Tipo Vehiculo', 
+        'Tarifa Aplicada', 
+        'Valor Cobrado', 
+        'Estado', 
+        'Operario Entrada', 
+        'Operario Salida'
+    ];
+
+    const rows = data.map(row => {
+        return [
+            formatLocalDate(row.fecha_entrada),
+            row.fecha_salida ? formatLocalDate(row.fecha_salida) : 'En Curso',
+            toCSVField(row.placa),
+            toCSVField(row.tipos_vehiculo?.nombre),
+            toCSVField(row.tarifas?.nombre),
+            row.valor_calculado || 0,
+            toCSVField(row.estado),
+            toCSVField(row.usuario_entrada),
+            toCSVField(row.usuario_salida)
+        ].join(',');
     });
 
+    // Agregar BOM para Excel y codificación UTF-8
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="reporte-${reportMonth}.csv"`);
+    res.send(csvContent);
+
   } catch (err) {
-    console.error("Error resetting espacios:", err);
+    console.error("Error generating report:", err);
     res.status(500).json({ error: err.message });
   }
 };
