@@ -7,42 +7,51 @@ const CAPACITY = {
 };
 
 /**
- * Obtener estado de cupos (Autos vs Motos)
+ * Obtener estado de cupos (Autos vs Motos) basado en tabla ESPACIOS
  * Ruta protegida: Solo OPERARIO
  */
 export const getQuotaStats = async (req, res) => {
   try {
-    // Count active vehicles by category
-    const { data, error } = await supabase
-      .from("registros")
-      .select("vehiculo_id")
-      .eq("estado", "EN_CURSO");
+    // Obtener espacios disponibles y ocupados por tipo
+    const { data: autosData, error: autosError } = await supabase
+      .from("espacios")
+      .select("id_espacio, disponible")
+      .eq("espacio_id", 1); // 1 = Auto/Sedán/Camioneta
 
-    if (error) throw error;
+    if (autosError) throw autosError;
 
-    let autoCount = 0;
-    let motoCount = 0;
+    const { data: motosData, error: motosError } = await supabase
+      .from("espacios")
+      .select("id_espacio, disponible")
+      .eq("espacio_id", 3); // 3 = Moto
 
-    data.forEach(r => {
-        if (r.vehiculo_id === 3) motoCount++;
-        else if (r.vehiculo_id === 1 || r.vehiculo_id === 2) autoCount++;
-    });
+    if (motosError) throw motosError;
+
+    // Contar disponibles y ocupados
+    const autosOcupados = autosData ? autosData.filter(e => !e.disponible).length : 0;
+    const autosDisponibles = autosData ? autosData.filter(e => e.disponible).length : 0;
+    const autosTotal = autosData ? autosData.length : 30;
+
+    const motosOcupadas = motosData ? motosData.filter(e => !e.disponible).length : 0;
+    const motosDisponibles = motosData ? motosData.filter(e => e.disponible).length : 0;
+    const motosTotal = motosData ? motosData.length : 15;
 
     res.json({
-        autos: {
-            active: autoCount,
-            total: CAPACITY.AUTO,
-            available: Math.max(0, CAPACITY.AUTO - autoCount)
-        },
-        motos: {
-            active: motoCount,
-            total: CAPACITY.MOTO,
-            available: Math.max(0, CAPACITY.MOTO - motoCount)
-        },
-        total: {
-            active: autoCount + motoCount,
-            limit: CAPACITY.AUTO + CAPACITY.MOTO
-        }
+      autos: {
+        active: autosOcupados,
+        total: autosTotal,
+        available: autosDisponibles
+      },
+      motos: {
+        active: motosOcupadas,
+        total: motosTotal,
+        available: motosDisponibles
+      },
+      total: {
+        active: autosOcupados + motosOcupadas,
+        limit: autosTotal + motosTotal,
+        available: autosDisponibles + motosDisponibles
+      }
     });
 
   } catch (err) {
@@ -110,6 +119,30 @@ export const registerEntry = async (req, res) => {
   }
 
   try {
+    // Verificar que el usuario autenticado existe en BD
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        error: "Usuario no autenticado correctamente",
+        code: "INVALID_USER"
+      });
+    }
+
+    // Verificar que el usuario existe en la BD
+    const { data: userExists, error: userCheckError } = await supabase
+      .from("usuarios")
+      .select("id_usuario")
+      .eq("id_usuario", userId)
+      .maybeSingle();
+
+    if (userCheckError) throw userCheckError;
+    if (!userExists) {
+      return res.status(401).json({
+        error: "Usuario no encontrado en BD",
+        code: "USER_NOT_FOUND"
+      });
+    }
+
     // Verificar si ya tiene entrada activa
     const { data: existing, error: checkError } = await supabase
       .from("registros")
@@ -173,7 +206,7 @@ export const registerEntry = async (req, res) => {
       vehiculo_id: tipo_vehiculo_id,
       entrada: getCurrentISOString(),
       estado: "EN_CURSO",
-      usuario_entrada: req.user.id,
+      usuario_entrada: userId, // Ya validado que existe
       tarifa_id: tarifaActiva ? tarifaActiva.id_tarifa : null
     };
 
@@ -211,58 +244,60 @@ export const registerEntry = async (req, res) => {
       registroData.espacio_id = espacio_id;
 
     } else {
-      // 1. Auto-asignación: Buscar y Ocupar atómicamente
-      // Intentamos buscar uno disponible
+      // Auto-asignación: Buscar espacio DISPONIBLE por tipo de vehículo y ocuparlo
+      // Usar espacio_id (1 para autos, 3 para motos)
+      const espacioTypeId = isMoto ? 3 : 1;
+      
       const { data: candidates, error: searchError } = await supabase
         .from('espacios')
-        .select('id_espacio')
-        .eq('espacio_id', tipo_vehiculo_id) // Tipo de vehículo
+        .select('id_espacio, codigo')
+        .eq('espacio_id', espacioTypeId) // Filtrar por tipo de vehículo
         .eq('disponible', true)
-        .limit(3); // Traer algunos candidatos
+        .order('id_espacio', { ascending: true })
+        .limit(1); // Traer solo el primero disponible
+
+      if (searchError) throw searchError;
 
       let assignedSpaceId = null;
 
       if (candidates && candidates.length > 0) {
-          // Intentar ocupar el primero que podamos
-          for (const candidate of candidates) {
-              const { data: occupiedSpace } = await supabase
-                .from('espacios')
-                .update({ disponible: false })
-                .eq('id_espacio', candidate.id_espacio)
-                .eq('disponible', true) // Check again atomic
-                .select()
-                .single();
-              
-              if (occupiedSpace) {
-                  assignedSpaceId = occupiedSpace.id_espacio;
-                  break; // Éxito
-              }
-          }
+        const spaceToOccupy = candidates[0];
+        
+        // Ocupar el espacio atómicamente
+        const { data: occupiedSpace, error: occupyError } = await supabase
+          .from('espacios')
+          .update({ disponible: false })
+          .eq('id_espacio', spaceToOccupy.id_espacio)
+          .eq('disponible', true) // Garantiza que sigue disponible
+          .select('id_espacio')
+          .single();
+
+        if (occupyError && occupyError.code !== 'PGRST116') {
+          throw occupyError;
+        }
+
+        if (occupiedSpace) {
+          assignedSpaceId = occupiedSpace.id_espacio;
+        } else {
+          return res.status(400).json({
+            error: `No hay espacios disponibles para ${isMoto ? 'Motos' : 'Autos'}`,
+            code: "NO_AVAILABLE_SPACES"
+          });
+        }
+      } else {
+        return res.status(400).json({
+          error: `No hay espacios disponibles para ${isMoto ? 'Motos' : 'Autos'}`,
+          code: "FULL_CAPACITY"
+        });
       }
 
       if (assignedSpaceId) {
         registroData.espacio_id = assignedSpaceId;
       } else {
-        // 2. Auto-provisioning: Crear nuevo espacio OCUPADO directamente
-        const suffix = Date.now().toString().slice(-4); 
-        const codigoGenerico = `GEN-${tipo_vehiculo_id}-${suffix}`;
-        
-        const { data: nuevoEspacio, error: errorCreacion } = await supabase
-          .from('espacios')
-          .insert([{
-            codigo: codigoGenerico,
-            espacio_id: tipo_vehiculo_id,
-            disponible: false // Se crea YA ocupado para evitar race condition
-          }])
-          .select('id_espacio')
-          .single();
-
-        if (errorCreacion) {
-           console.error("Error creando espacio automático:", errorCreacion);
-           throw new Error(`Error al asignar espacio automáticamente para tipo ${tipo_vehiculo_id}`);
-        }
-
-        registroData.espacio_id = nuevoEspacio.id_espacio;
+        return res.status(400).json({
+          error: "No se pudo asignar espacio",
+          code: "SPACE_ASSIGNMENT_FAILED"
+        });  
       }
     }
 
@@ -280,11 +315,8 @@ export const registerEntry = async (req, res) => {
             espacio_id,
             entrada,
             estado,
-            espacios (
-            codigo
-            ),
             tipos_vehiculo (
-            nombre
+              nombre
             )
         `)
         .single();
@@ -296,23 +328,38 @@ export const registerEntry = async (req, res) => {
 
     if (error) {
         // Rollback: Liberar espacio
-        await supabase
+        if (registroData.espacio_id) {
+          await supabase
             .from('espacios')
             .update({ disponible: true })
             .eq('id_espacio', registroData.espacio_id);
+        }
         throw error;
     }
     
     // El espacio ya fue marcado como ocupado antes del insert
     console.log('[registerEntry] Response data:', JSON.stringify(data, null, 2));
-    
+
+    // Obtener el código del espacio asignado (consulta separada para evitar dependencia de relación FK)
+    let espacioCodigo = null;
+    if (data.espacio_id) {
+      const { data: espRow, error: espErr } = await supabase
+        .from('espacios')
+        .select('codigo')
+        .eq('id_espacio', data.espacio_id)
+        .maybeSingle();
+
+      if (!espErr && espRow) espacioCodigo = espRow.codigo;
+    }
+
     const responseData = {
       ...data,
-      entrada_formateada: formatLocalDate(data.entrada)
+      entrada_formateada: formatLocalDate(data.entrada),
+      espacios: { codigo: espacioCodigo || 'Sin asignar' }
     };
-    
+
     console.log('[registerEntry] Final response:', JSON.stringify(responseData, null, 2));
-    
+
     res.status(201).json({ 
       message: "Entrada registrada",
       data: responseData
@@ -456,7 +503,7 @@ export const registerExit = async (req, res) => {
         estado: "FINALIZADO",
         total_minutos: diffMins,
         valor_calculado: costoTotal,
-        usuario_salida: req.user.id,
+        usuario_salida: req.user?.id || null, // Opcional si no hay usuario válido
         tarifa_id: tarifaUsadaId // Actualizamos la tarifa usada realmente
       })
       .eq("id_registro", registro.id_registro)

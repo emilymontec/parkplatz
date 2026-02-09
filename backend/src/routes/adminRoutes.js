@@ -7,7 +7,9 @@ import {
   createUser,
   updateUser,
   toggleUserStatus,
-  getRegistrosDebug
+  getRegistrosDebug,
+  getEspacios,
+  resetEspacios
 } from "../controllers/adminController.js";
 import {
   getTarifas,
@@ -29,6 +31,10 @@ router.get("/stats", getDashboardStats);
 
 // DEBUG: Ver datos completos de registros de hoy
 router.get("/debug/registros-hoy", getRegistrosDebug);
+
+// Gestión de Espacios (Parking Spaces)
+router.get("/espacios", getEspacios);
+router.post("/espacios/reset", resetEspacios);
 
 // Historial de registros
 router.get("/registros", getRegistrosHistory);
