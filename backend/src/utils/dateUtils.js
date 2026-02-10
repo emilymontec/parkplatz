@@ -5,7 +5,7 @@
  */
 
 import { format, parseISO } from 'date-fns';
-import { toZonedTime, fromZonedTime } from 'date-fns-tz';
+import { toZonedTime, fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 
 const TIMEZONE = 'America/Bogota';
 
@@ -93,9 +93,9 @@ export const formatLocalDateOnly = (date) => {
  * @returns {string} ISO string en UTC para almacenar
  */
 export const getCurrentISOString = () => {
-  // Retorna ISO string en UTC puro sin offset para evitar ambigüedades
-  // Esto asegura que la BD y los cálculos de diferencia de tiempo sean precisos
-  return new Date().toISOString();
+  // Retorna ISO string con el offset correcto de Colombia (e.g. -05:00)
+  // Esto asegura que la BD reciba la hora explícita en la zona horaria correcta
+  return formatInTimeZone(new Date(), TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
 };
 
 /**
