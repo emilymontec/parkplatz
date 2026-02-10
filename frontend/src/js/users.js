@@ -131,6 +131,9 @@ const renderTable = (users) => {
                             title="${user.activo ? 'Desactivar' : 'Activar'}">
                         <i class="fa-solid ${user.activo ? 'fa-user-slash' : 'fa-user-check'}"></i>
                     </button>
+                    <button class="btn-action" onclick="window.resetPassword('${user.id_usuario}')" title="Restablecer Contraseña">
+                        <i class="fa-solid fa-key"></i>
+                    </button>
                 </div>
             </td>
         </tr>
@@ -140,6 +143,49 @@ const renderTable = (users) => {
     window.editUser = (id) => {
         const user = users.find(u => u.id_usuario == id);
         if (user) openModal(user);
+    };
+
+    window.resetPassword = async (id) => {
+        const confirmed = await showConfirm({
+            title: 'Restablecer Contraseña',
+            message: '¿Estás seguro de restablecer la contraseña de este usuario?\nSe asignará la contraseña predeterminada.',
+            type: 'warning'
+        });
+
+        if (!confirmed) return;
+
+        try {
+            const res = await fetch(`/api/admin/usuarios/${id}/reset-password`, {
+                method: 'PATCH',
+                headers: {
+                    ...getAuthHeaders(),
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                await showAlert({
+                    title: 'Éxito',
+                    message: 'Contraseña restablecida correctamente.',
+                    type: 'success'
+                });
+            } else {
+                await showAlert({
+                    title: 'Error',
+                    message: data.error || 'Error al restablecer contraseña',
+                    type: 'error'
+                });
+            }
+        } catch (err) {
+            console.error(err);
+            await showAlert({
+                title: 'Error',
+                message: 'No se pudo conectar con el servidor',
+                type: 'error'
+            });
+        }
     };
 
     window.toggleUser = async (id, currentStatus) => {

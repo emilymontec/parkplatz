@@ -312,6 +312,35 @@ export const toggleUserStatus = async (req, res) => {
 };
 
 /**
+ * Restablecer contraseña de usuario
+ */
+export const resetUserPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const defaultPassword = process.env.DEFAULT_RESET_PASSWORD;
+    
+    if (!defaultPassword) {
+        throw new Error('La configuración de restablecimiento no está disponible (Variable de entorno faltante).');
+    }
+    
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(defaultPassword, salt);
+
+    const { data, error } = await supabase
+      .from("usuarios")
+      .update({ password_hash })
+      .eq("id_usuario", id)
+      .select();
+
+    if (error) throw error;
+    
+    res.json({ message: 'Contraseña restablecida correctamente', user: data[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/**
  * DEBUG: Obtener todos los registros de hoy sin filtros de estado
  */
 export const getRegistrosDebug = async (req, res) => {

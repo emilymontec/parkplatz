@@ -7,6 +7,7 @@ import {
   createUser,
   updateUser,
   toggleUserStatus,
+  resetUserPassword,
   getRegistrosDebug,
   getEspacios,
   resetEspacios,
@@ -49,6 +50,7 @@ router.get("/usuarios", getUsers);
 router.post("/usuarios", createUser);
 router.put("/usuarios/:id", updateUser);
 router.patch("/usuarios/:id/toggle", toggleUserStatus);
+router.patch("/usuarios/:id/reset-password", resetUserPassword);
 
 // Gestión de Tarifas
 router.get("/tarifas", getTarifas);
