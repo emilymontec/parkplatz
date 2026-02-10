@@ -93,9 +93,9 @@ export const formatLocalDateOnly = (date) => {
  * @returns {string} ISO string en UTC para almacenar
  */
 export const getCurrentISOString = () => {
-  // Retorna ISO string con el offset correcto de Colombia (e.g. -05:00)
-  // Esto asegura que la BD reciba la hora explícita en la zona horaria correcta
-  return formatInTimeZone(new Date(), TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+  // Retorna ISO string en UTC puro (sin offset) para evitar ambigüedades en parseISO
+  // Esto previene sumas incorrectas de minutos al calcular diferencias
+  return new Date().toISOString();
 };
 
 /**
