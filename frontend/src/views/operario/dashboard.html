@@ -108,27 +108,63 @@
         </div>
 
         <form id="entryForm">
-            <div class="input-group">
-                <label>Placa del Vehículo</label>
-                <div class="input-icon-container">
-                    <i class="fa-solid fa-id-card input-icon"></i>
-                    <input type="text" name="placa" class="input-field input-with-icon"
-                        style="text-transform: uppercase; font-weight: 800; font-family: 'Outfit'; letter-spacing: 1px;"
-                        placeholder="ABC-123" required>
+            <!-- Paso 1: Datos de Entrada -->
+            <div id="stepEntryForm">
+                <div class="input-group">
+                    <label>Placa del Vehículo</label>
+                    <div class="input-icon-container">
+                        <i class="fa-solid fa-id-card input-icon"></i>
+                        <input type="text" name="placa" class="input-field input-with-icon"
+                            style="text-transform: uppercase; font-weight: 800; font-family: 'Outfit'; letter-spacing: 1px;"
+                            placeholder="ABC-123" required>
+                    </div>
+                </div>
+    
+                <div class="input-group">
+                    <label>Tipo de Vehículo</label>
+                    <select name="tipo" class="input-field" required>
+                        <option value="">Cargando...</option>
+                    </select>
+                </div>
+    
+                <div class="btn-group" style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
+                    <button type="button" onclick="document.getElementById('entryModal').style.display = 'none'"
+                        class="btn btn-cancel">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Completar Registro</button>
                 </div>
             </div>
 
-            <div class="input-group">
-                <label>Tipo de Vehículo</label>
-                <select name="tipo" class="input-field" required>
-                    <option value="">Cargando...</option>
-                </select>
-            </div>
+            <!-- Paso 2: Ticket de Entrada -->
+            <div id="stepEntryTicket" style="display: none; text-align: center; margin-top: 20px;">
+                <div id="entryTicketContent" style="background: white; padding: 20px; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05); margin-bottom: 20px; font-family: 'Courier New', Courier, monospace;">
+                    <h3 style="margin-bottom: 10px; border-bottom: 2px solid #333; padding-bottom: 10px; text-transform: uppercase;">Parkplatz</h3>
+                    <p style="margin: 5px 0; font-weight: bold;">TICKET DE ENTRADA</p>
+                    
+                    <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+                        <strong>Placa:</strong> <span id="entryTicketPlaca" style="font-size: 1.2rem;">---</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                        <span>Tipo:</span> <span id="entryTicketType">---</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                        <span>Hora Entrada:</span> <span id="entryTicketTime">--:--</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                        <span>Espacio:</span> <span id="entryTicketSpace">---</span>
+                    </div>
 
-            <div class="btn-group" style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
-                <button type="button" onclick="document.getElementById('entryModal').style.display = 'none'"
-                    class="btn btn-cancel">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Completar Registro</button>
+                    <div style="margin-top: 20px; display: flex; justify-content: center; flex-direction: column; align-items: center;">
+                        <div id="entryTicketQR" style="margin-bottom: 10px;"></div>
+                        <span style="font-size: 0.7rem; color: #999;">Presentar a la salida</span>
+                    </div>
+                </div>
+
+                <div class="btn-group" style="display: flex; gap: 1rem;">
+                    <button type="button" id="btnCloseEntryTicket" class="btn btn-primary" style="flex: 1;">Finalizar</button>
+                    <button type="button" id="btnPrintEntryTicket" class="btn btn-secondary" title="Imprimir Ticket">
+                        <i class="fa-solid fa-print"></i>
+                    </button>
+                </div>
             </div>
         </form>
     </div>
@@ -158,6 +194,21 @@
                 <button type="button" id="btnSearchPlate" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
                     <i class="fa-solid fa-calculator"></i> Calcular Cobro
                 </button>
+                
+                <div style="text-align: center; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
+                    <span style="color: #666; font-size: 0.9rem;">o escanear ticket</span>
+                    <button type="button" id="btnScanQR" class="btn btn-secondary" style="width: 100%; margin-top: 10px;">
+                        <i class="fa-solid fa-qrcode"></i> Escanear QR
+                    </button>
+                </div>
+                
+                <!-- Contenedor del escáner (oculto por defecto) -->
+                <div id="qrScannerContainer" style="display: none; margin-top: 15px;">
+                    <div id="reader" style="width: 100%; border-radius: 8px; overflow: hidden;"></div>
+                    <button type="button" id="btnStopScan" class="btn btn-cancel" style="width: 100%; margin-top: 10px;">
+                        Cancelar Escaneo
+                    </button>
+                </div>
             </div>
 
             <!-- Paso 2: Resumen -->
@@ -217,10 +268,10 @@
                     <div style="border-bottom: 1px dashed #ccc; margin: 10px 0;"></div>
                     
                     <div style="display: flex; justify-content: space-between; margin: 5px 0;">
-                        <span>Entrada:</span> <span id="receiptEntry">--:--</span>
+                        <span>Fecha Pago:</span> <span id="receiptPaymentTime">--:--</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin: 5px 0;">
-                        <span>Salida:</span> <span id="receiptExit">--:--</span>
+                        <span>Operario:</span> <span id="receiptOperator">---</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin: 5px 0;">
                         <span>Tiempo:</span> <span id="receiptDuration">---</span>
@@ -232,10 +283,6 @@
                         <strong>TOTAL:</strong> <span id="receiptTotal" style="font-weight: 800;">$0</span>
                     </div>
                     
-                    <div style="margin-top: 20px; display: flex; justify-content: center; flex-direction: column; align-items: center;">
-                        <div id="receiptQR" style="margin-bottom: 10px;"></div>
-                        <span style="font-size: 0.7rem; color: #999;">ID: <span id="receiptIdText"></span></span>
-                    </div>
                     <p style="font-size: 0.8rem; color: #666; margin-top: 15px;">¡Gracias por su visita!</p>
                 </div>
 

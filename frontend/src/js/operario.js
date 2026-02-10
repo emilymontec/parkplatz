@@ -2,6 +2,8 @@ import { getAuthHeaders, navigateTo, clearAuthSession, showConfirm, showAlert } 
 
 let currentVehicles = []; // Almacen local para filtrado
 
+let html5QrcodeScanner = null;
+
 export default function initOperator() {
 
     // 1. Mostrar info de usuario
@@ -30,6 +32,7 @@ export default function initOperator() {
     // 5. Lógica de Modal Entrada
     if (btnEntry) {
         btnEntry.onclick = () => {
+            resetEntryModal();
             if (modal) modal.style.display = 'flex';
         };
     }
@@ -40,6 +43,24 @@ export default function initOperator() {
         }
     }
 
+    // Handlers para Ticket de Entrada
+    const btnCloseEntryTicket = document.getElementById('btnCloseEntryTicket');
+    const btnPrintEntryTicket = document.getElementById('btnPrintEntryTicket');
+
+    if (btnCloseEntryTicket) {
+        btnCloseEntryTicket.onclick = () => {
+            if (modal) modal.style.display = 'none';
+            resetEntryModal();
+            loadVehicles(); // Recargar lista al cerrar
+        };
+    }
+
+    if (btnPrintEntryTicket) {
+        btnPrintEntryTicket.onclick = () => {
+            printEntryTicket();
+        };
+    }
+
     // New: Lógica de Modal Salida
     const exitModal = document.getElementById('exitModal');
     const btnExit = document.getElementById('btnExit');
@@ -47,6 +68,11 @@ export default function initOperator() {
     const exitForm = document.getElementById('exitForm');
     const btnSearchPlate = document.getElementById('btnSearchPlate');
     const btnBackSearch = document.getElementById('btnBackSearch');
+    
+    // Scanner UI refs
+    const btnScanQR = document.getElementById('btnScanQR');
+    const btnStopScan = document.getElementById('btnStopScan');
+    const scannerContainer = document.getElementById('qrScannerContainer');
 
     if (btnExit) {
         btnExit.onclick = () => {
@@ -58,6 +84,7 @@ export default function initOperator() {
     if (btnCancelExit && exitModal) {
         btnCancelExit.onclick = () => {
             exitModal.style.display = 'none';
+            stopScanner();
         }
     }
 
@@ -69,6 +96,18 @@ export default function initOperator() {
                 return;
             }
             await calculateExit(placa);
+        };
+    }
+
+    if (btnScanQR) {
+        btnScanQR.onclick = () => {
+            startScanner();
+        };
+    }
+
+    if (btnStopScan) {
+        btnStopScan.onclick = () => {
+            stopScanner();
         };
     }
 
@@ -106,7 +145,10 @@ export default function initOperator() {
     // Cerrar al hacer clic fuera del card
     window.onclick = (e) => {
         if (e.target === modal) modal.style.display = 'none';
-        if (e.target === exitModal) exitModal.style.display = 'none';
+        if (e.target === exitModal) {
+            exitModal.style.display = 'none';
+            stopScanner();
+        }
     };
 
     // 6. Submit Formulario (ENTRADA)
@@ -151,20 +193,10 @@ export default function initOperator() {
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Error al registrar entrada');
 
-                // Confirmación visual detallada
-                const reg = data.data; // El backend devuelve { message, data: { ... } }
-                const horaEntrada = new Date(reg.entrada).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-                const codigoEspacio = reg.espacios?.codigo || 'Sin asignar';
-                const tipoVehiculo = reg.tipos_vehiculo?.nombre || 'Vehículo';
-
-                await showAlert({
-                    title: 'Entrada exitosa',
-                    message: `Placa: ${reg.placa}\nEspacio: ${codigoEspacio}\nHora: ${horaEntrada}\nTipo: ${tipoVehiculo}`,
-                    type: 'success',
-                    btnText: 'Entendido'
-                });
+                // Mostrar Ticket de Entrada en lugar de solo alerta
+                const reg = data.data; 
+                showEntryTicket(reg);
                 
-                if (modal) modal.style.display = 'none';
                 form.reset();
                 loadVehicles();
 
@@ -339,10 +371,6 @@ function resetExitModal() {
     if (stepSearch) stepSearch.style.display = 'block';
     if (stepSummary) stepSummary.style.display = 'none';
     if (stepReceipt) stepReceipt.style.display = 'none';
-    
-    // Clear receipt data
-    const qr = document.getElementById('receiptQR');
-    if (qr) qr.innerHTML = '';
 }
 
 async function calculateExit(placa) {
@@ -498,39 +526,27 @@ function showReceipt(data) {
 
     const reg = data.data; // Updated record
     const ticketId = reg.id_registro;
-    const entrada = new Date(reg.entrada);
     const salida = new Date(reg.salida);
     
     document.getElementById('receiptTicket').textContent = ticketId;
     document.getElementById('receiptPlaca').textContent = reg.placa;
-    document.getElementById('receiptEntry').textContent = entrada.toLocaleTimeString('es-CO', {hour: '2-digit', minute:'2-digit'});
-    document.getElementById('receiptExit').textContent = salida.toLocaleTimeString('es-CO', {hour: '2-digit', minute:'2-digit'});
+    
+    // Fecha y hora de pago (usamos fecha de salida)
+    const paymentTime = salida.toLocaleString('es-CO', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute:'2-digit', hour12: true
+    });
+    document.getElementById('receiptPaymentTime').textContent = paymentTime;
+
+    // Operario
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const operatorName = user.nombres_apellidos || user.username || 'Operario';
+    document.getElementById('receiptOperator').textContent = operatorName;
+
     document.getElementById('receiptDuration').textContent = `${data.duracion_minutos} min`;
-    document.getElementById('receiptIdText').textContent = ticketId;
     
     const totalFormatted = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(data.costo_total);
     document.getElementById('receiptTotal').textContent = totalFormatted;
-
-    // Generate QR
-    const qrContainer = document.getElementById('receiptQR');
-    qrContainer.innerHTML = ''; // Clear previous
-    try {
-        if (window.QRCode) {
-            new QRCode(qrContainer, {
-                text: ticketId.toString(),
-                width: 128,
-                height: 128,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
-            });
-        } else {
-            qrContainer.textContent = "QR Lib Missing";
-        }
-    } catch (e) {
-        console.error("Error generating QR", e);
-        qrContainer.textContent = "Error QR";
-    }
 }
 
 function printReceipt() {
@@ -541,8 +557,6 @@ function printReceipt() {
     win.document.write(`
         <style>
             body { font-family: 'Courier New', monospace; text-align: center; padding: 20px; } 
-            #receiptQR { margin: 20px auto; display: flex; justify-content: center; }
-            #receiptQR img { margin: 0 auto; }
             h3 { border-bottom: 2px solid black; padding-bottom: 10px; }
             div { margin: 5px 0; }
             .total { font-size: 1.5em; font-weight: bold; margin-top: 15px; }
@@ -557,4 +571,153 @@ function printReceipt() {
         win.print();
         win.close();
     }, 500);
+}
+
+function showEntryTicket(data) {
+    const formStep = document.getElementById('stepEntryForm');
+    const ticketStep = document.getElementById('stepEntryTicket');
+    
+    if (formStep) formStep.style.display = 'none';
+    if (ticketStep) ticketStep.style.display = 'block';
+    
+    document.getElementById('entryTicketPlaca').textContent = data.placa;
+    
+    // Intentar obtener el nombre del tipo desde el select antes de que se resetee (o buscarlo)
+    // Como el formulario ya se reseteó en el submit handler antes de llamar a esta función, 
+    // es mejor buscar en el select por valor si es posible, o usar un fallback.
+    // Nota: en el submit handler original, form.reset() se llama DESPUÉS de showEntryTicket.
+    // Verificaremos el orden. Si form.reset() es después, podemos leer el select.
+    
+    const select = document.querySelector('select[name="tipo"]');
+    if (select) {
+        // Si el valor coincide, usamo el texto. Si ya se reseteó, buscamos por value.
+        // Pero data.tipo_vehiculo_id debe coincidir con alguna opción.
+        const option = Array.from(select.options).find(opt => opt.value == data.tipo_vehiculo_id);
+        if (option) {
+            document.getElementById('entryTicketType').textContent = option.text;
+        } else {
+             document.getElementById('entryTicketType').textContent = 'Vehículo';
+        }
+    }
+
+    const entrada = new Date(data.entrada);
+    document.getElementById('entryTicketTime').textContent = entrada.toLocaleTimeString('es-CO', {
+        hour: '2-digit', minute: '2-digit', hour12: true
+    });
+    
+    document.getElementById('entryTicketSpace').textContent = data.espacio_id || 'General';
+
+    const qrContainer = document.getElementById('entryTicketQR');
+    if (qrContainer) {
+        qrContainer.innerHTML = '';
+        new QRCode(qrContainer, {
+            text: data.placa,
+            width: 128,
+            height: 128,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+    }
+}
+
+function resetEntryModal() {
+    const formStep = document.getElementById('stepEntryForm');
+    const ticketStep = document.getElementById('stepEntryTicket');
+    
+    if (formStep) formStep.style.display = 'block';
+    if (ticketStep) ticketStep.style.display = 'none';
+    
+    const form = document.getElementById('entryForm');
+    if (form) form.reset();
+    
+    const qrContainer = document.getElementById('entryTicketQR');
+    if (qrContainer) qrContainer.innerHTML = '';
+}
+
+function printEntryTicket() {
+    const content = document.getElementById('entryTicketContent').innerHTML;
+    const win = window.open('', '', 'height=600,width=400');
+    win.document.write('<html><head><title>Ticket de Entrada</title>');
+    win.document.write(`
+        <style>
+            body { font-family: 'Courier New', monospace; text-align: center; padding: 20px; } 
+            h3 { border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px; }
+            div { margin: 10px 0; }
+            #entryTicketQR img { margin: 0 auto; }
+        </style>
+    `);
+    win.document.write('</head><body>');
+    win.document.write(content);
+    win.document.write('</body></html>');
+    win.document.close();
+    win.focus();
+    setTimeout(() => {
+        win.print();
+        win.close();
+    }, 500);
+}
+
+function startScanner() {
+    const container = document.getElementById('qrScannerContainer');
+    if (container) container.style.display = 'block';
+    
+    if (html5QrcodeScanner) {
+        return; 
+    }
+
+    // Usamos Html5QrcodeScanner para una UI rápida
+    html5QrcodeScanner = new Html5QrcodeScanner(
+        "reader",
+        { fps: 10, qrbox: 250 }
+    );
+    
+    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+    
+    const btnScan = document.getElementById('btnScanQR');
+    const btnStop = document.getElementById('btnStopScan');
+    if (btnScan) btnScan.style.display = 'none';
+    if (btnStop) btnStop.style.display = 'inline-block';
+}
+
+function stopScanner() {
+    if (html5QrcodeScanner) {
+        html5QrcodeScanner.clear().then(() => {
+            html5QrcodeScanner = null;
+            const container = document.getElementById('qrScannerContainer');
+            if (container) container.style.display = 'none';
+            
+            const btnScan = document.getElementById('btnScanQR');
+            const btnStop = document.getElementById('btnStopScan');
+            if (btnScan) btnScan.style.display = 'inline-block';
+            if (btnStop) btnStop.style.display = 'none';
+        }).catch(error => {
+            console.error("Failed to clear html5QrcodeScanner. ", error);
+        });
+    }
+}
+
+function onScanSuccess(decodedText, decodedResult) {
+    console.log(`Code matched = ${decodedText}`, decodedResult);
+    
+    // Asumimos que el QR tiene la placa o un JSON con la placa
+    let placa = decodedText;
+    try {
+        const data = JSON.parse(decodedText);
+        if (data.placa) placa = data.placa;
+    } catch (e) {
+        // No es JSON, usar texto plano
+    }
+    
+    const input = document.getElementById('placaSearchInput');
+    if (input) input.value = placa;
+    
+    stopScanner();
+    
+    // Trigger cálculo automático
+    calculateExit(placa);
+}
+
+function onScanFailure(error) {
+    // console.warn(`Code scan error = ${error}`);
 }
