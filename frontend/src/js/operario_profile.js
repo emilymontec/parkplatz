@@ -1,13 +1,6 @@
 import { showAlert, showConfirm, clearAuthSession, navigateTo, getAuthHeaders } from './routes.js';
 
 export default async function initProfile() {
-    // Verificar token antes de cargar
-    const token = localStorage.getItem('token');
-    if (!token) {
-        window.location.href = '/';
-        return;
-    }
-
     // Elementos UI
     const userNameElement = document.getElementById('userName');
     const profileNameHeader = document.getElementById('profileNameHeader');
