@@ -58,6 +58,14 @@ export const login = async (req, res) => {
       });
     }
 
+    // Verificar si es la contraseña por defecto
+    const defaultPassword = process.env.DEFAULT_RESET_PASSWORD;
+    let mustChangePassword = false;
+
+    if (defaultPassword) {
+      mustChangePassword = await bcrypt.compare(defaultPassword, user.password_hash);
+    }
+
     // Preparar datos del usuario para el token
     const tokenPayload = {
       id: user.id_usuario,
@@ -77,7 +85,8 @@ export const login = async (req, res) => {
       token,
       user: {
         ...userInfo,
-        rol: tokenPayload.rol // Enviar nombre del rol
+        rol: tokenPayload.rol, // Enviar nombre del rol
+        mustChangePassword
       }
     });
 
@@ -87,6 +96,63 @@ export const login = async (req, res) => {
       error: "Error en el servidor",
       code: "SERVER_ERROR"
     });
+  }
+};
+
+/**
+ * Cambiar contraseña propia
+ */
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id; // From middleware
+
+    // Validar nueva contraseña
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: "La nueva contraseña debe tener al menos 6 caracteres." });
+    }
+
+    const defaultPassword = process.env.DEFAULT_RESET_PASSWORD;
+    if (defaultPassword && newPassword === defaultPassword) {
+      return res.status(400).json({ error: "La nueva contraseña no puede ser igual a la predeterminada." });
+    }
+
+    // Obtener hash actual para verificar
+    const { data: user } = await supabase
+      .from("usuarios")
+      .select("password_hash")
+      .eq("id_usuario", userId)
+      .single();
+
+    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+
+    // Verificar contraseña actual (seguridad extra)
+    const validCurrent = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!validCurrent) {
+      return res.status(400).json({ error: "La contraseña actual es incorrecta." });
+    }
+
+    // Verificar que la nueva no sea igual a la actual
+    const sameAsCurrent = await bcrypt.compare(newPassword, user.password_hash);
+    if (sameAsCurrent) {
+      return res.status(400).json({ error: "La nueva contraseña debe ser diferente a la actual." });
+    }
+
+    // Actualizar
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(newPassword, salt);
+
+    const { error: updateError } = await supabase
+      .from("usuarios")
+      .update({ password_hash })
+      .eq("id_usuario", userId);
+
+    if (updateError) throw updateError;
+
+    res.json({ message: "Contraseña actualizada correctamente." });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };
 
