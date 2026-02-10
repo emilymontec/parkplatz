@@ -449,3 +449,83 @@ main {
 .hidden {
     display: none !important;
 }
+
+/* --- Responsiveness --- */
+@media (max-width: 768px) {
+    /* Navbar stack */
+    .navbar {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+        align-items: stretch;
+    }
+
+    .nav-links {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        order: 2; /* Put links below logo/profile if desired, or keep natural order */
+    }
+
+    .logo {
+        justify-content: center;
+    }
+
+    .user-profile {
+        justify-content: center;
+        order: 3;
+    }
+
+    /* Main Content Padding */
+    main {
+        padding: 0 1rem;
+        margin: 1.5rem auto;
+    }
+
+    /* Page Header Stack */
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .page-header > div {
+        width: 100%;
+    }
+
+    .page-header h1 {
+        font-size: 1.25rem;
+    }
+
+    /* Tables scroll */
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+    }
+
+    .data-table {
+        min-width: 600px; /* Force scroll */
+    }
+    
+    .data-table th, 
+    .data-table td {
+        padding: 0.75rem; /* Slightly smaller padding */
+    }
+
+    /* Modals */
+    .modal-content {
+        width: 95%;
+        padding: 1.5rem;
+        margin: 1rem;
+    }
+    
+    /* Stats Grid (if using admin.css grid) */
+    .stats-grid {
+        grid-template-columns: 1fr; /* Stack cards */
+    }
+    
+    /* Forms */
+    .input-group label {
+        font-size: 0.8rem;
+    }
+}
