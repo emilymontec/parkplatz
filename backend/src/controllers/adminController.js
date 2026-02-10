@@ -166,6 +166,7 @@ export const getUsers = async (req, res) => {
       .select(`
         id_usuario,
         username,
+        email,
         nombres_apellidos,
         rol_id,
         activo,
@@ -174,7 +175,14 @@ export const getUsers = async (req, res) => {
       .order("nombres_apellidos");
 
     if (error) throw error;
-    res.json(data);
+    
+    // Aplanar estructura de roles para el frontend
+    const users = data.map(user => ({
+        ...user,
+        rol: user.roles ? user.roles.nombre : 'SIN ROL'
+    }));
+
+    res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -202,7 +210,7 @@ export const getRoles = async (req, res) => {
  */
 export const createUser = async (req, res) => {
   try {
-    const { username, password, nombres_apellidos, rol_id } = req.body;
+    const { username, password, nombres_apellidos, email, rol_id } = req.body;
 
     // Validar que el rol existe
     const { data: roleData, error: roleError } = await supabase
@@ -223,6 +231,7 @@ export const createUser = async (req, res) => {
       .from("usuarios")
       .insert([{
         username,
+        email,
         password_hash,
         nombres_apellidos,
         rol_id,
@@ -246,7 +255,7 @@ export const createUser = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { username, password, nombres_apellidos, rol_id } = req.body;
+    const { username, password, nombres_apellidos, email, rol_id } = req.body;
 
     // Validar rol si se envía
     if (rol_id) {
@@ -263,6 +272,7 @@ export const updateUser = async (req, res) => {
     const updates = {
       username,
       nombres_apellidos,
+      email,
       rol_id
     };
 

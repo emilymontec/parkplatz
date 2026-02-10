@@ -158,6 +158,14 @@ const routes = {
         controller: './tarifas.js',
         initFn: 'initTarifas'
     },
+    '/admin/perfil': {
+        view: '/src/views/admin/profile.html',
+        styles: ['/src/css/global.css', '/src/css/admin.css'],
+        title: 'Perfil Admin - Parkplatz',
+        role: 'ADMINISTRADOR',
+        controller: './admin_profile.js',
+        initFn: 'default'
+    },
     '/operario': {
         view: '/src/views/operario/dashboard.html',
         styles: ['/src/css/global.css', '/src/css/operario.css'],
@@ -165,8 +173,111 @@ const routes = {
         role: 'OPERARIO',
         controller: './operario.js',
         initFn: 'initOperator'
+    },
+    '/operario/perfil': {
+        view: '/src/views/operario/profile.html',
+        styles: ['/src/css/global.css', '/src/css/operario.css'],
+        title: 'Perfil Operario - Parkplatz',
+        role: 'OPERARIO',
+        controller: './operario_profile.js',
+        initFn: 'default'
     }
 };
+
+/**
+ * Validar y forzar cambio de contraseña
+ */
+function checkForcePasswordChange(user, path) {
+    if (user && user.mustChangePassword) {
+        // Verificar si ya existe el modal, si no, crearlo
+        let modal = document.getElementById('forceChangePasswordModal');
+        if (!modal) {
+            createForceChangePasswordModal();
+        }
+    }
+}
+
+function createForceChangePasswordModal() {
+    const modalHtml = `
+    <div id="forceChangePasswordModal" class="modal-overlay active" style="z-index: 9999; display: flex;">
+        <div class="modal-content" style="max-width: 450px;">
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size: 3rem; color: var(--warning);"></i>
+                <h2 style="margin-top: 1rem;">Cambio de Contraseña Obligatorio</h2>
+                <p style="color: var(--text-muted);">Por seguridad, debes cambiar tu contraseña predeterminada antes de continuar.</p>
+            </div>
+            
+            <form id="forceChangePasswordForm">
+                <div class="input-group">
+                    <label>Contraseña Actual</label>
+                    <div class="input-icon-container">
+                        <i class="fa-solid fa-lock input-icon"></i>
+                        <input type="password" id="forceCurrentPassword" class="input-field input-with-icon" placeholder="Ingresa tu contraseña actual" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Nueva Contraseña</label>
+                    <div class="input-icon-container">
+                        <i class="fa-solid fa-key input-icon"></i>
+                        <input type="password" id="forceNewPassword" class="input-field input-with-icon" placeholder="Nueva contraseña" required minlength="6">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Confirmar Nueva Contraseña</label>
+                    <div class="input-icon-container">
+                        <i class="fa-solid fa-check-double input-icon"></i>
+                        <input type="password" id="forceConfirmPassword" class="input-field input-with-icon" placeholder="Repite la nueva contraseña" required minlength="6">
+                    </div>
+                </div>
+                <div style="text-align: right; margin-top: 1.5rem;">
+                     <button type="submit" class="btn btn-primary" style="width: 100%;">Actualizar y Continuar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    const form = document.getElementById('forceChangePasswordForm');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const currentPassword = document.getElementById('forceCurrentPassword').value;
+        const newPassword = document.getElementById('forceNewPassword').value;
+        const confirmNewPassword = document.getElementById('forceConfirmPassword').value;
+
+        if (newPassword !== confirmNewPassword) {
+            await showAlert({ title: 'Error', message: 'Las contraseñas no coinciden', type: 'error' });
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('authToken');
+            const res = await fetch('/api/auth/change-password', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ currentPassword, newPassword })
+            });
+            
+            const data = await res.json();
+            
+            if (res.ok) {
+                await showAlert({ title: 'Éxito', message: 'Contraseña actualizada. Inicia sesión nuevamente.', type: 'success' });
+                clearAuthSession();
+                window.location.href = '/';
+            } else {
+                await showAlert({ title: 'Error', message: data.error || 'Error al actualizar', type: 'error' });
+            }
+        } catch (err) {
+            console.error(err);
+            await showAlert({ title: 'Error', message: 'Error de conexión', type: 'error' });
+        }
+    });
+}
 
 /**
  * Función para navegar a una ruta (History API)
@@ -274,6 +385,11 @@ const router = async () => {
         console.warn(`Acceso denegado: Se requiere autenticación para ${path}`);
         navigateTo('/');
         return;
+    }
+
+    // Verificar si debe cambiar contraseña (para usuarios autenticados)
+    if (user && !config?.public) {
+        checkForcePasswordChange(user, path);
     }
 
     // Si el usuario está autenticado y trata de acceder a login

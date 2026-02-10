@@ -1,0 +1,94 @@
+<nav class="navbar">
+    <a href="/admin" class="logo">
+        <img src="/src/static/icons/logo.png" alt="Logo">
+        <span>Parkplatz</span>
+    </a>
+    <div class="nav-links">
+        <a href="/admin">Panel</a>
+        <a href="/admin/users">Usuarios</a>
+        <a href="/admin/tarifas">Tarifas</a>
+        <a href="/admin/perfil" class="active">Perfil</a>
+    </div>
+    <div class="user-profile">
+        <div class="user-info">
+            <span id="userName" class="user-name">Cargando...</span>
+            <span class="user-role">Administrador</span>
+        </div>
+        <button id="logoutBtn" class="btn btn-logout" style="padding: 10px; min-width: 42px;">
+            <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
+    </div>
+</nav>
+
+<main>
+    <div class="page-header">
+        <div>
+            <h1>Mi Perfil</h1>
+            <p>Administra tu información personal y seguridad.</p>
+        </div>
+    </div>
+
+    <div style="max-width: 600px; margin: 0 auto;">
+        <div class="card">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;">
+                <div style="width: 64px; height: 64px; background: var(--bg-main); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--text-muted);">
+                    <i class="fa-solid fa-user-tie"></i>
+                </div>
+                <div>
+                    <h2 id="profileNameHeader" style="margin: 0; font-size: 1.5rem;">Cargando...</h2>
+                    <span id="profileUsernameHeader" class="text-muted">@...</span>
+                </div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 2rem 0;">
+
+            <form id="updateProfileForm">
+                <h3 style="margin-bottom: 1.5rem;">Información Personal</h3>
+                
+                <div class="input-group">
+                    <label>Nombre Completo</label>
+                    <div class="input-icon-container">
+                        <i class="fa-solid fa-id-card input-icon"></i>
+                        <input type="text" id="profileName" class="input-field input-with-icon" required>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Correo Electrónico</label>
+                    <div class="input-icon-container">
+                        <i class="fa-solid fa-envelope input-icon"></i>
+                        <input type="email" id="profileEmail" class="input-field input-with-icon" required>
+                    </div>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid var(--border); margin: 2rem 0;">
+
+                <h3 style="margin-bottom: 1.5rem;">Seguridad</h3>
+                <p class="text-muted" style="margin-bottom: 1rem; font-size: 0.9rem;">Deja los campos de contraseña en blanco si no deseas cambiarla.</p>
+
+                <div class="input-group">
+                    <label>Nueva Contraseña</label>
+                    <div class="input-icon-container">
+                        <i class="fa-solid fa-key input-icon"></i>
+                        <input type="password" id="newPassword" class="input-field input-with-icon" minlength="6" placeholder="••••••">
+                    </div>
+                    <small class="text-muted" style="font-size: 0.8rem; margin-top: 4px; display: block;">Mínimo 6 caracteres</small>
+                </div>
+
+                <div class="input-group">
+                    <label>Confirmar Nueva Contraseña</label>
+                    <div class="input-icon-container">
+                        <i class="fa-solid fa-check-double input-icon"></i>
+                        <input type="password" id="confirmNewPassword" class="input-field input-with-icon" minlength="6" placeholder="••••••">
+                    </div>
+                </div>
+
+                <div style="margin-top: 2rem; text-align: right;">
+                    <button type="submit" class="btn btn-primary">
+                        Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
