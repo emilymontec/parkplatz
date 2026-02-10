@@ -1,6 +1,6 @@
 import { showAlert, showConfirm, clearAuthSession, navigateTo, getAuthHeaders } from './routes.js';
 
-export default async function initProfile() {
+export default async function initAdminProfile() {
     // Verificar token antes de cargar
     const token = localStorage.getItem('token');
     if (!token) {
@@ -34,7 +34,7 @@ export default async function initProfile() {
             if (profileNameInput) profileNameInput.value = user.nombres_apellidos || '';
             if (profileEmailInput) profileEmailInput.value = user.email || '';
             
-            // Actualizar localStorage para mantener consistencia
+            // Actualizar localStorage
             const localUser = JSON.parse(localStorage.getItem('user')) || {};
             localStorage.setItem('user', JSON.stringify({ ...localUser, ...user }));
         } else {
@@ -76,6 +76,7 @@ export default async function initProfile() {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            const nombres_apellidos = profileNameInput.value;
             const email = profileEmailInput.value;
             const newPassword = document.getElementById('newPassword').value;
             const confirmNewPassword = document.getElementById('confirmNewPassword').value;
@@ -93,7 +94,7 @@ export default async function initProfile() {
             }
 
             try {
-                const body = { email };
+                const body = { email, nombres_apellidos };
                 if (newPassword) {
                     body.password = newPassword;
                 }
@@ -120,8 +121,10 @@ export default async function initProfile() {
                         clearAuthSession();
                         navigateTo('/login');
                     } else {
-                        // Recargar datos visuales si solo cambió email
-                        profileUsernameHeader.textContent = '@' + data.user.username; // Username no cambia pero por si acaso
+                        // Recargar datos visuales
+                        profileNameHeader.textContent = data.user.nombres_apellidos;
+                        userNameElement.textContent = data.user.nombres_apellidos;
+                        
                         // Actualizar localStorage
                         const localUser = JSON.parse(localStorage.getItem('user')) || {};
                         localStorage.setItem('user', JSON.stringify({ ...localUser, ...data.user }));

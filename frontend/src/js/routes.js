@@ -158,6 +158,14 @@ const routes = {
         controller: './tarifas.js',
         initFn: 'initTarifas'
     },
+    '/admin/perfil': {
+        view: '/src/views/admin/profile.html',
+        styles: ['/src/css/global.css', '/src/css/admin.css'],
+        title: 'Perfil Admin - Parkplatz',
+        role: 'ADMINISTRADOR',
+        controller: './admin_profile.js',
+        initFn: 'default'
+    },
     '/operario': {
         view: '/src/views/operario/dashboard.html',
         styles: ['/src/css/global.css', '/src/css/operario.css'],

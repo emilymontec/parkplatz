@@ -1,16 +1,18 @@
 <nav class="navbar">
-    <a href="/operario" class="logo">
+    <a href="/admin" class="logo">
         <img src="/src/static/icons/logo.png" alt="Logo">
         <span>Parkplatz</span>
     </a>
     <div class="nav-links">
-        <a href="/operario">Operación</a>
-        <a href="/operario/perfil" class="active">Perfil</a>
+        <a href="/admin">Panel</a>
+        <a href="/admin/users">Usuarios</a>
+        <a href="/admin/tarifas">Tarifas</a>
+        <a href="/admin/perfil" class="active">Perfil</a>
     </div>
     <div class="user-profile">
         <div class="user-info">
             <span id="userName" class="user-name">Cargando...</span>
-            <span class="user-role">Operario</span>
+            <span class="user-role">Administrador</span>
         </div>
         <button id="logoutBtn" class="btn btn-logout" style="padding: 10px; min-width: 42px;">
             <i class="fa-solid fa-right-from-bracket"></i>
@@ -30,7 +32,7 @@
         <div class="card">
             <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;">
                 <div style="width: 64px; height: 64px; background: var(--bg-main); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--text-muted);">
-                    <i class="fa-solid fa-user"></i>
+                    <i class="fa-solid fa-user-tie"></i>
                 </div>
                 <div>
                     <h2 id="profileNameHeader" style="margin: 0; font-size: 1.5rem;">Cargando...</h2>
@@ -47,9 +49,8 @@
                     <label>Nombre Completo</label>
                     <div class="input-icon-container">
                         <i class="fa-solid fa-id-card input-icon"></i>
-                        <input type="text" id="profileName" class="input-field input-with-icon" disabled style="background-color: var(--bg-main); opacity: 0.7;">
+                        <input type="text" id="profileName" class="input-field input-with-icon" required>
                     </div>
-                    <small class="text-muted">Este campo no puede ser modificado.</small>
                 </div>
 
                 <div class="input-group">
