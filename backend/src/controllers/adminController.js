@@ -196,7 +196,7 @@ export const getRoles = async (req, res) => {
         const { data, error } = await supabase
             .from("roles")
             .select("*")
-            .order("id_rol");
+            .order("id_roles");
         
         if (error) throw error;
         res.json(data);
@@ -215,8 +215,8 @@ export const createUser = async (req, res) => {
     // Validar que el rol existe
     const { data: roleData, error: roleError } = await supabase
         .from('roles')
-        .select('id_rol')
-        .eq('id_rol', rol_id)
+        .select('id_roles')
+        .eq('id_roles', rol_id)
         .single();
     
     if (roleError || !roleData) {
@@ -261,8 +261,8 @@ export const updateUser = async (req, res) => {
     if (rol_id) {
         const { data: roleData, error: roleError } = await supabase
             .from('roles')
-            .select('id_rol')
-            .eq('id_rol', rol_id)
+            .select('id_roles')
+            .eq('id_roles', rol_id)
             .single();
         if (roleError || !roleData) {
             return res.status(400).json({ error: "Rol inválido" });
