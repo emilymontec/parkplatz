@@ -1,180 +1,155 @@
-
+<div align="center">
 
 # PARKPLATZ
-## Sistema de Gestión de Estacionamiento
 
-Sistema web para la gestión de estacionamientos que permite registrar entradas y salidas de vehículos, administrar espacios disponibles y configurar tarifas según el tipo de vehículo. Incluye un panel administrativo con estadísticas en tiempo real, historial de movimientos y reportes mensuales.
+<p align="center">
+  <strong>Parking Lot Monitoring and Management System with Vehicle Flow Control Infrastructure</strong>
+</p>
 
-## Características
+<sub> Created by: </sub>
+<p align="center">
+  <a href="https://github.com/jailisita">Jailiss Gómez</a> ·
+  <a href="https://github.com/jemcu">Gemima Cerpa</a> ·
+  <a href="https://github.com/mptse">Melany Tesillo</a> ·
+  <a href="https://github.com/emilymontec">Emily Monterrosa</a>
+</p>
 
-### Rol Operario
-* Registro de entrada de vehículos (placa, tipo de vehículo y espacio asignado).<br>
-* Registro de salida con cálculo automático de tarifa.<br>
-* Vista previa del costo antes de confirmar la salida.<br>
-* Consulta del estado de ocupación y cupos disponibles en tiempo real.<br>
+<img src="https://img.shields.io/badge/backend-node.js-fb7d03?style=flat-square">
+<img src="https://img.shields.io/badge/frontend-html5/css3-fb7d03?style=flat-square">
+<img src="https://img.shields.io/badge/database-supabase-fb7d03?style=flat-square">
 
-### Rol Administradores
-* Dashboard con estadísticas diarias.<br>
-* Historial completo de registros con filtros.<br>
-* Reportes mensuales de ingresos.<br>
-* Gestión de espacios de estacionamiento.<br>
-* Administración de tarifas por tipo de vehículo.<br>
-* Administración de usuarios.<br>
-* Activación, desactivación y restablecimiento de contraseñas.<br>
+</div>
 
-## Tecnologías Utilizadas
+---
 
-| Capa | Tecnología |
+We are a student group focused on exploring emerging technologies and developing innovative solutions.
+
+As part of our learning and experimentation process, we have created a web-based parking management system that allows users to record vehicle entries and exits, manage parking space availability, and set rates based on vehicle type.
+
+| | |
 |---|---|
-| **Frontend** | HTML5 · CSS3 · JavaScript Vanilla + Vite |
-| **Backend** | Node.js + Express.js (ESModules) |
-| **Base de datos** | Supabase (PostgreSQL) |
-| **Autenticación** | JWT + bcrypt |
-| **Despliegue** | Vercel (Web Service único) |
+| **Administrative Dashboard** | real-time statistics, movement history, and monthly report generation. |
+| **Operator Dashboard** | vehicle entry and exit registration, real-time check of occupancy status and available spaces. |
+| **Rates** | rate management by the administrator, rate calculation, and payment processing. |
+| **User Profiles** | activating and deactivating profiles, and resetting passwords. |
 
-## Arquitectura
-```bash
-Usuario
-   │
-   ▼ 
-Frontend (Vite + JavaScript)
-   │
-   ▼
-API REST (Node.js + Express)
-   │
-   ▼
-Supabase PostgreSQL
+You can do all of this here.
+
+---
+
+## Functions such as...
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+<h3>Administrator</h3>
+
+You can view a dashboard with daily statistics, access the history of vehicle entry and exit records, generate monthly reports exportable as PDFs, manage parking spaces by vehicle type, manage rates by vehicle type and time period (day, hour, time slot), manage users, activate/deactivate accounts, and reset passwords.
+
+</td>
+<td width="50%" valign="top">
+
+<h3>Operator</h3>
+
+Record vehicle entry (license plate, vehicle type, and assigned space) and issue a registration ticket; record exit with automatic fee calculation and cost preview (receipt). Check available and occupied spaces in real time.
+
+</td>
+</tr>
+</table>
+
+---
+
+## Technologies Used
+
+<img src="https://img.shields.io/badge/Node.js-+22-fb7d03?style=flat-square"> <img src="https://img.shields.io/badge/Express.js-+5.2-fb7d03?style=flat-square">
+<img src="https://img.shields.io/badge/HTML-5-fb7d03?style=flat-square"> <img src="https://img.shields.io/badge/CSS-3-fb7d03?style=flat-square">
+<img src="https://img.shields.io/badge/Vite-+5.4-fb7d03?style=flat-square"> <img src="https://img.shields.io/badge/Supabase-PostgreSQL-fb7d03?style=flat-square">
+<img src="https://img.shields.io/badge/Deployment-Vercel-fb7d03?style=flat-square">
+
+---
+
+## System Architecture
+```
+parkplatz → Users → Frontend → Backend → Database
 ```
 
-## Requisitos
-* Node.js 22 o superior
-* Base de datos en Supabase
-* npm
+---
 
-## Instalación
+## Installation
 
-### 1. Clonar el repositorio
 ```bash
-git clone https://github.com/emilymontec/PARKPLATZ.git
-cd PARKPLATZ
+git clone https://github.com/emilymontec/parkplatz.git; cd parkplatz
 ```
 
-### 2. Configurar variables de entorno
-Crea el archivo `backend/.env`, con las siguientes variables:
+Clone the repository on your computer and navigate to the project directory.
+
+### Set environment variables
+
+Create a `.env` file in the directory `backend` of the project and add the following variables:
 
 ```bash
-SUPABASE_URL=https://id.supabase.co 
-SUPABASE_KEY=public_api_key
-SUPABASE_SERVICE_ROLE_KEY=private_api_key
-SUPABASE_PSWD=password_db
-JWT_SECRET=jwt_example
-DEFAULT_RESET_PASSWORD=P123
+# .env
+SUPABASE_URL=SUPABASE_URL
+SUPABASE_KEY=SUPABASE_KEY
+SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY
+SUPABASE_PSWD=SUPABASE_PSWD
+JWT_SECRET=JWT_SECRET_KEY
+DEFAULT_RESET_PASSWORD=DEFAULT_RESET_PASSWORD
 ```
 
-### 3. Configurar la base de datos
-En el **SQL Editor** de tu proyecto en Supabase, ejecuta el archivo `backend/schema.sql`.
+### Configure the database
 
-### 4. Iniciar en desarrollo
+In the SQL Editor of your Supabase project, run the file `backend/schema.sql`.
+
+### Execute
+
 ```bash
-#Instalar dependencias de la raíz
 npm install
-
-#Iniciar backend y frontend simultáneamente
-npm run dev
-```
-**La aplicación estará disponible en:** http://localhost:4000
-
-## Estructura del Proyecto
-
-```
-PARKPLATZ/
-├── package.json              # Scripts globales (dev, build)
-│
-├── frontend/
-│   ├── src/                  # Código fuente del frontend
-│   ├── public/               # Archivos estáticos
-│   ├── dist/                 # Build de producción (generado)
-│   ├── index.html
-│   └── vite.config.js
-│
-└── backend/
-    ├── .env                  # Variables de entorno (NO subir a GitHub)
-    ├── schema.sql            # Esquema de base de datos
-    ├── package.json
-    └── src/
-        ├── index.js          # Punto de entrada del servidor
-        ├── config/
-        │   └── db.js         # Configuración de Supabase
-        ├── routes/
-        │   ├── authRoutes.js
-        │   ├── registroRoutes.js
-        │   └── adminRoutes.js
-        ├── controllers/
-        ├── middlewares/
-        ├── services/
-        └── utils/
+npm start
 ```
 
-## APIs
+> The app will be available at: http://localhost:4000
 
-### Autenticación (`/api/auth`)
-| Método | Ruta | Descripción | Acceso |
-|---|---|---|---|
-| POST | `/api/auth/login` | Iniciar sesión | Público |
+---
 
-### Registros (`/api/registros`)
-| Método | Ruta | Descripción | Acceso |
-|---|---|---|---|
-| GET | `/api/registros/cupos` | Estado de cupos | Operario+ |
-| GET | `/api/registros/activos` | Vehículos en el parqueadero | Operario+ |
-| GET | `/api/registros/tipos-vehiculo` | Lista de tipos | Operario+ |
-| GET | `/api/registros/preview-salida` | Previsualizar costo de salida | Operario+ |
-| POST | `/api/registros/entrada` | Registrar entrada | Operario+ |
-| POST | `/api/registros/salida` | Registrar salida | Operario+ |
-
-### Administración (`/api/admin`)
-| Método | Ruta | Descripción |
-|---|---|---|
-| GET | `/api/admin/stats` | Estadísticas del dashboard |
-| GET | `/api/admin/reporte` | Reporte mensual |
-| GET | `/api/admin/registros` | Historial de registros |
-| GET | `/api/admin/espacios` | Estado de espacios |
-| POST | `/api/admin/espacios/reset` | Resetear espacios a disponible |
-| GET | `/api/admin/usuarios` | Listar usuarios |
-| POST | `/api/admin/usuarios` | Crear usuario |
-| PUT | `/api/admin/usuarios/:id` | Editar usuario |
-| PATCH | `/api/admin/usuarios/:id/toggle` | Activar/desactivar usuario |
-| PATCH | `/api/admin/usuarios/:id/reset-password` | Resetear contraseña |
-| GET | `/api/admin/tarifas` | Listar tarifas |
-| POST | `/api/admin/tarifas` | Crear tarifa |
-| PUT | `/api/admin/tarifas/:id` | Editar tarifa |
-| PATCH | `/api/admin/tarifas/:id/toggle` | Activar/desactivar tarifa |
-
-## Seguridad
-Autenticación basada en JWT.<br>
-Contraseñas cifradas mediante bcrypt.<br>
-Control de acceso basado en roles.<br>
-Variables sensibles protegidas mediante archivos .env.<br>
-Separación de privilegios mediante cuentas operativas y administrativas.<br>
-
-## Contribuciones
-Haz un fork. <br>
-Crea una rama nueva para tu funcionalidad:
+## File Structure
 ```bash
-git checkout -b feature/nueva-funcion
+   Parkplatz
+      │
+      ├── frontend/
+      │   ├── src/                  # Código fuente del frontend
+      │   ├── public/               # Archivos estáticos
+      │   ├── dist/                 # Build de producción (generado)
+      │   ├── index.html
+      │   └── vite.config.js
+      │
+      └── backend/
+          ├── .env                  # Variables de entorno (NO subir a GitHub)
+          ├── schema.sql            # Esquema de base de datos
+          ├── package.json
+          └── src/
+              ├── index.js          # Punto de entrada del servidor
+              ├── config/
+              │   └── db.js         # Configuración de Supabase
+              ├── routes/
+              │   ├── authRoutes.js
+              │   ├── registroRoutes.js
+              │   └── adminRoutes.js
+              ├── controllers/
+              ├── middlewares/
+              ├── services/
+              └── utils/
 ```
-Realiza tus cambios y haz commit. <br>
-Abre un Pull Request.
 
-## Licencia
-Este proyecto está bajo la **Licencia MIT**.<br>
-Consulta el archivo [LICENSE](./LICENSE) para más información.
+---
 
-## Equipo de Desarrollo
+## License
 
-| Integrante | Rol |	GitHub 
-|---|---|---|
-| Jemima Cerpa | Desarrollo Frontend | [jemcu](https://github.com/jemcu) |
-| Jailiss Gómez	| Diseño UX/UI | [jailisita](https://github.com/jailisita) |
-| Melany Tesillo | Desarrollo Frontend | [mptse](https://github.com/mptse) |
-| Emily Monterrosa | Desarrollo Backend | [emilymontec](https://github.com/emilymontec) |
+This project is licensed under the **[MIT License](./LICENSE)**. See the file for more information.
+
+---
+
+<p align="center">
+  <strong>The system is not deployed.</strong>
+</p>
